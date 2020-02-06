@@ -6,6 +6,7 @@
   },
   "cmake.buildDirectory": "${workspaceFolder}/../build-gltf-viewer-tutorial",
   "files.associations": {
+    "*.glsl": "cpp",
     "algorithm": "cpp",
     "cctype": "cpp",
     "chrono": "cpp",
@@ -73,7 +74,17 @@
     "clocale": "cpp",
     "forward_list": "cpp",
     "string_view": "cpp",
-    "valarray": "cpp"
+    "valarray": "cpp",
+    "atomic": "cpp",
+    "*.tcc": "cpp",
+    "cstdarg": "cpp",
+    "cwctype": "cpp",
+    "deque": "cpp",
+    "memory_resource": "cpp",
+    "optional": "cpp",
+    "random": "cpp",
+    "cinttypes": "cpp",
+    "bit": "cpp"
   },
   "workbench.colorCustomizations": {
     "titleBar.activeBackground": "#f23016",
