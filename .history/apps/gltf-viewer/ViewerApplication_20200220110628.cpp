@@ -226,29 +226,9 @@ std::vector<GLuint> ViewerApplication::createBufferObjects( const tinygltf::Mode
 
 std::vector<GLuint> ViewerApplication::createVertexArrayObjects( const tinygltf::Model &model, const std::vector<GLuint> &bufferObjects, std::vector<VaoRange> & meshIndexToVaoRange){
   std::vector<GLuint> vertexArrayObjects;
-  const GLuint VERTEX_ATTRIB_POSITION_IDX = 0;
-  const GLuint VERTEX_ATTRIB_NORMAL_IDX = 1;
-  const GLuint VERTEX_ATTRIB_TEXCOORD0_IDX = 2;
-
-  // { Indice of Mesh , Number of primitives}  need this to Draw After
-  meshIndexToVaoRange.resize(model.meshes.size());
-  // const auto vaoOffset = vertexArrayObjects.size();
+  const auto vaoOffset = vertexArrayObjects.size();
+  std::cout << "actual size == " << std::endl;
   // vertexArrayObjects.resize(vaoOffset + model.meshes[meshIdx].primitives.size());
-  // meshIndexToVaoRange.push_back(VaoRange{vaoOffset, model.meshes[meshIdx].primitives.size()});
-
-  int compteur = 0;
-  for (const auto &mesh : model.meshes){
-    auto vaoOffset = vertexArrayObjects.size();
-    meshIndexToVaoRange[compteur].begin = vaoOffset;
-    meshIndexToVaoRange[compteur].count = mesh.primitives.size() ;
-
-    // resize vector of VAOs en ajoutant a chque iteration le nombre de primitives de la "Mesh"
-    vertexArrayObjects.resize(vaoOffset + mesh.primitives.size());
-
-    /* Here Start */
-    /* Here Finish*/
-    compteur++;
-  }
   // meshIndexToVaoRange.push_back(VaoRange{vaoOffset, model.meshes[meshIdx].primitives.size()});
 
   // // For each mesh of model we keep its range of VAOs

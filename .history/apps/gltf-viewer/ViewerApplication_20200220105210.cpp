@@ -62,11 +62,13 @@ int ViewerApplication::run()
   }
 
   // TODO Creation of Buffer Objects
+  std::cout << " Error 1" << std::endl;
   const auto bufferObjects = createBufferObjects(model);
+  std::cout << " Error 2" << std::endl;
 
   // TODO Creation of Vertex Array Objects
-  std::vector<VaoRange> meshToVertexArrays;
-  const auto vertexArrayObjects = createVertexArrayObjects(model, bufferObjects, meshToVertexArrays);
+  // std::vector<VaoRange> meshToVertexArrays;
+  // const auto vertexArrayObjects = createVertexArrayObjects(model, bufferObjects, meshToVertexArrays);
 
   // Setup OpenGL state for rendering
   glEnable(GL_DEPTH_TEST);
@@ -212,43 +214,26 @@ bool ViewerApplication::loadGltfFile(tinygltf::Model & model){
 
 
 std::vector<GLuint> ViewerApplication::createBufferObjects( const tinygltf::Model &model){
-  //create a vector of GLuint with the correct size (model.buffers.size()) and use glGenBuffers to create buffer objects.
+  //reate a vector of GLuint with the correct size (model.buffers.size()) and use glGenBuffers to create buffer objects.
   std::vector<GLuint> bufferObjects(model.buffers.size(), 0);
   glGenBuffers(GLsizei(model.buffers.size()), bufferObjects.data());
+  std::cout << " Error 1.1" << std::endl;
   for (size_t i = 0; i < model.buffers.size(); ++i) {
     glBindBuffer(GL_ARRAY_BUFFER, bufferObjects[i]);
-    // glBufferStorage in 4.4, etant limité sur 4.3 je doit utiliser glBufferData
-    glBufferData(GL_ARRAY_BUFFER, model.buffers[i].data.size(),model.buffers[i].data.data(), GL_STATIC_DRAW);
+    std::cout << " Error 1.1.1 " << size_t(glBufferStorage) << std::endl;
+    glBufferData(GL_ARRAY_BUFFER, model.buffers[i].data.size(),model.buffers[i].data.data(), 0);
+    std::cout << " Error 1.1.2" << std::endl;
   }
+  std::cout << " Error 1.2" << std::endl;
   glBindBuffer(GL_ARRAY_BUFFER, 0);
   return bufferObjects;
 }
 
 std::vector<GLuint> ViewerApplication::createVertexArrayObjects( const tinygltf::Model &model, const std::vector<GLuint> &bufferObjects, std::vector<VaoRange> & meshIndexToVaoRange){
   std::vector<GLuint> vertexArrayObjects;
-  const GLuint VERTEX_ATTRIB_POSITION_IDX = 0;
-  const GLuint VERTEX_ATTRIB_NORMAL_IDX = 1;
-  const GLuint VERTEX_ATTRIB_TEXCOORD0_IDX = 2;
-
-  // { Indice of Mesh , Number of primitives}  need this to Draw After
-  meshIndexToVaoRange.resize(model.meshes.size());
-  // const auto vaoOffset = vertexArrayObjects.size();
+  const auto vaoOffset = vertexArrayObjects.size();
+  std::cout << "actual size == " << std::endl;
   // vertexArrayObjects.resize(vaoOffset + model.meshes[meshIdx].primitives.size());
-  // meshIndexToVaoRange.push_back(VaoRange{vaoOffset, model.meshes[meshIdx].primitives.size()});
-
-  int compteur = 0;
-  for (const auto &mesh : model.meshes){
-    auto vaoOffset = vertexArrayObjects.size();
-    meshIndexToVaoRange[compteur].begin = vaoOffset;
-    meshIndexToVaoRange[compteur].count = mesh.primitives.size() ;
-
-    // resize vector of VAOs en ajoutant a chque iteration le nombre de primitives de la "Mesh"
-    vertexArrayObjects.resize(vaoOffset + mesh.primitives.size());
-
-    /* Here Start */
-    /* Here Finish*/
-    compteur++;
-  }
   // meshIndexToVaoRange.push_back(VaoRange{vaoOffset, model.meshes[meshIdx].primitives.size()});
 
   // // For each mesh of model we keep its range of VAOs
