@@ -1,0 +1,2 @@
+
+cmake ../gltf-viewer-tutorial/; cmake --build . -j; ./bin/gltf-viewer viewer ../glTF-Sample-Models/2.0/Sponza/glTF/Sponza.gltf --lookat "-5.26056,6.59932,0.85661,-4.40144,6.23486,0.497347,0.342113,0.931131,-0.126476"

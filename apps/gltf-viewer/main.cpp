@@ -10,7 +10,7 @@ std::vector<std::string> split(
 int main(int argc, char **argv)
 {
   auto returnCode = 0;
-
+  
   // args library https://github.com/taywee/args
   args::ArgumentParser parser{"glTF Viewer."};
   args::HelpFlag help{parser, "help", "Display this help menu", {'h', "help"}};
@@ -21,6 +21,7 @@ int main(int argc, char **argv)
         GLFWHandle handle{1, 1, "", false};
         printGLVersion();
       }};
+
   args::Command interactive{
       commands, "viewer", "Run glTF viewer", [&](args::Subparser &parser) {
         args::Positional<std::string> file{
@@ -89,7 +90,6 @@ int main(int argc, char **argv)
     std::cerr << parser;
     return 1;
   }
-
   return returnCode;
 }
 
