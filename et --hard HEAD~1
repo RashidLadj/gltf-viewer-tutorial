@@ -1,0 +1,95 @@
+[33mcommit 263e29fba43cb2dfcc65a333ec44f557f7ff56ea[m[33m ([m[1;36mHEAD -> [m[1;32mmaster[m[33m)[m
+Author: LADJOUZI rachid <59792800+RashidLadj@users.noreply.github.com>
+Date:   Thu Feb 20 17:00:11 2020 +0100
+
+    Commit 5: Start Constuction VAO
+
+[33mcommit ae5fdf1ade358d164724c489762a70448282c027[m
+Author: LADJOUZI rachid <59792800+RashidLadj@users.noreply.github.com>
+Date:   Thu Feb 20 10:13:52 2020 +0100
+
+    Commit 4
+
+[33mcommit bda7220f59f1ca22c17693b78a412c2c6cf1a63b[m
+Author: LADJOUZI rachid <59792800+RashidLadj@users.noreply.github.com>
+Date:   Thu Feb 20 08:57:43 2020 +0100
+
+    Commit 3
+
+[33mcommit c6cfdc021b2413c31ab32b5a4711fa2893d4eacd[m
+Author: RashidLadj <RashidLadj@gmail.com>
+Date:   Thu Feb 6 11:31:19 2020 +0100
+
+    Second commit
+
+[33mcommit 2f9f96926c443b9dd2eca2f5f28f4c8359eef7ab[m
+Author: Celeborn2BeAlive <laurent.noel.c2ba@gmail.com>
+Date:   Wed Feb 5 22:17:48 2020 +0100
+
+    Prepare code for TrackballCameraController exercise
+
+[33mcommit 392699ec80540f6147b9e260f01491d256a3e6ee[m
+Author: Laurent NOEL <laurent.noel.c2ba@gmail.com>
+Date:   Tue Feb 4 13:08:25 2020 +0100
+
+    VSCode title bar color
+
+[33mcommit c647625c68c63917973a9ed15547e99690992788[m
+Author: Celeborn2BeAlive <laurent.noel.c2ba@gmail.com>
+Date:   Tue Jan 21 16:02:25 2020 +0100
+
+    Fix bad assert
+
+[33mcommit 26a460f997bdd61920786ec465e0d22867255228[m
+Author: Celeborn2BeAlive <laurent.noel.c2ba@gmail.com>
+Date:   Tue Jan 21 15:07:39 2020 +0100
+
+    Fix warnings
+
+[33mcommit 80839d0a19efb4c45cb91f351de655b2ff77e1f8[m
+Author: Celeborn2BeAlive <laurent.noel.c2ba@gmail.com>
+Date:   Tue Jan 21 11:13:35 2020 +0100
+
+    Remove ifdef section
+
+[33mcommit bba0c65cf581fc9cbc51c692308ae7712bf9842e[m
+Author: Celeborn2BeAlive <laurent.noel.c2ba@gmail.com>
+Date:   Tue Jan 21 11:12:29 2020 +0100
+
+    Add safety test to renderToImage
+
+[33mcommit 9e94b2aff69db482e0bb9a0eebb4269d10204bc8[m
+Author: Celeborn2BeAlive <laurent.noel.c2ba@gmail.com>
+Date:   Tue Jan 21 11:04:46 2020 +0100
+
+    Add renderToImage function
+
+[33mcommit e8ef578705a17e5b4282a7581e502390a64bdfba[m
+Author: Celeborn2BeAlive <laurent.noel.c2ba@gmail.com>
+Date:   Tue Jan 21 05:43:33 2020 +0100
+
+    Add tiny_gltf_impl.cpp
+
+[33mcommit 6a0e569962b0d7c29d5032c4386034696f7700f8[m
+Author: Celeborn2BeAlive <laurent.noel.c2ba@gmail.com>
+Date:   Tue Jan 21 05:22:47 2020 +0100
+
+    Add code template for ViewerApplication.
+
+[33mcommit c384f0dfbf926fa37ac0252a7c62659e20ab25de[m
+Author: Celeborn2BeAlive <laurent.noel.c2ba@gmail.com>
+Date:   Tue Jan 21 04:35:09 2020 +0100
+
+    Add utils code
+
+[33mcommit 2647d5a39b1a741bb7f56427d92c0c89f4658d8a[m
+Author: Celeborn2BeAlive <laurent.noel.c2ba@gmail.com>
+Date:   Tue Jan 21 04:26:57 2020 +0100
+
+    Add version to tasks.json
+
+[33mcommit c90338679fecfc8a1a70ee4748b01a9f231b132b[m
+Author: Celeborn2BeAlive <laurent.noel.c2ba@gmail.com>
+Date:   Tue Jan 21 04:26:08 2020 +0100
+
+    Initial commit with code structure, hello world and third-parties
