@@ -108,19 +108,18 @@ int ViewerApplication::run()
               if (primitive.indices >= 0) {
                 const auto &accessor = model.accessors[primitive.indices];
                 const auto &bufferView = model.bufferViews[accessor.bufferView];
-                const auto byteOffset = accessor.byteOffset + bufferView.byteOffset;
-                glDrawElements(primitive.mode, GLsizei(accessor.count), accessor.componentType, (const GLvoid *)byteOffset);
+                const auto byteOffset =
+                    accessor.byteOffset + bufferView.byteOffset;
+                glDrawElements(primitive.mode, GLsizei(accessor.count),
+                    accessor.componentType, (const GLvoid *)byteOffset);
               } else {
+                // Take first accessor to get the count
                 const auto accessorIdx = (*begin(primitive.attributes)).second;
                 const auto &accessor = model.accessors[accessorIdx];
                 glDrawArrays(primitive.mode, 0, GLsizei(accessor.count));
               }
             }
             /*********/
-          }
-          // For Children Nodes
-          for (const auto childNode : node.children) {
-            drawNode(childNode, modelMatrix);
           }
         };
 
@@ -277,20 +276,20 @@ std::vector<GLuint> ViewerApplication::createVertexArrayObjects( const tinygltf:
   // vertexArrayObjects.resize(vaoOffset + model.meshes[meshIdx].primitives.size());
   // meshIndexToVaoRange.push_back(VaoRange{vaoOffset, model.meshes[meshIdx].primitives.size()});
 
-  GLsizei compteur = 0;
+  int compteur = 0;
   for (const auto &mesh : model.meshes){
-    auto vaoOffset = GLsizei(vertexArrayObjects.size());
+    auto vaoOffset = vertexArrayObjects.size();
     meshIndexToVaoRange[compteur].begin = vaoOffset;
-    auto numberOfPrimitives  = GLsizei(mesh.primitives.size());
+    auto numberOfPrimitives  = mesh.primitives.size();
     meshIndexToVaoRange[compteur].count = numberOfPrimitives;
 
     // resize vector of VAOs en ajoutant a chque iteration le nombre de primitives de la "Mesh"
-    vertexArrayObjects.resize(vertexArrayObjects.size() + mesh.primitives.size());
+    vertexArrayObjects.resize(vaoOffset + mesh.primitives.size());
 
     /* Here Start */
     // vaoOffset represente le debut du poiteur sur le tableau et numberOfPrimitive la taille
     glGenVertexArrays (numberOfPrimitives,&vertexArrayObjects[vaoOffset]);
-    for (size_t pimitiveIndice = 0; pimitiveIndice < size_t(numberOfPrimitives) ; ++pimitiveIndice) {
+    for (size_t pimitiveIndice = 0; pimitiveIndice < numberOfPrimitives ; ++pimitiveIndice) {
       const auto vao = vertexArrayObjects[vaoOffset + pimitiveIndice];
       const auto &primitive = mesh.primitives[pimitiveIndice];
       glBindVertexArray(vao);
@@ -302,8 +301,8 @@ std::vector<GLuint> ViewerApplication::createVertexArrayObjects( const tinygltf:
             mymap[VERTEX_ATTRIB_NORMAL_IDX]   = "NORMAL";
             mymap[VERTEX_ATTRIB_TEXCOORD0_IDX]= "TEXCOORD_0";
 
-        for(const GLuint vertexAttrib : parametersVertexAttribs ){
-          //std::cout <<  "Nous traitons l'attribut " << mymap.find(vertexAttrib)->second << std::endl;
+        for(const auto vertexAttrib : parametersVertexAttribs ){
+          std::cout <<  "Nous traitons l'attribut " << mymap.find(vertexAttrib)->second << std::endl;
           const auto iterator = primitive.attributes.find(mymap.find(vertexAttrib)->second);
 
           if (iterator != end(primitive.attributes)) { // If "POSITION" has been found in the map yep
@@ -316,17 +315,14 @@ std::vector<GLuint> ViewerApplication::createVertexArrayObjects( const tinygltf:
             const auto bufferObject = bufferObjects[bufferIdx];// TODO get the correct buffer object from the buffer index
 
             // TODO Enable the vertex attrib array corresponding to POSITION with glEnableVertexAttribArray (you need to use VERTEX_ATTRIB_POSITION_IDX which has to be defined at the top of the cpp file)
-            // Correction de l'attribut
-            glEnableVertexAttribArray(vertexAttrib);
-            assert(GL_ARRAY_BUFFER == bufferView.target);
+            glEnableVertexAttribArray(VERTEX_ATTRIB_POSITION_IDX);
             // TODO Bind the buffer object to GL_ARRAY_BUFFER
             glBindBuffer(GL_ARRAY_BUFFER, bufferObject);
 
             const auto byteOffset = accessor.byteOffset + bufferView.byteOffset;// TODO Compute the total byte offset using the accessor and the buffer view
             // TODO Call glVertexAttribPointer with the correct arguments. 
             glBindBuffer(GL_ARRAY_BUFFER, bufferObjects[bufferIdx]);
-             // Correction de l'attribut
-            glVertexAttribPointer(vertexAttrib, accessor.type,accessor.componentType, GL_FALSE, GLsizei(bufferView.byteStride),
+            glVertexAttribPointer(VERTEX_ATTRIB_NORMAL_IDX, accessor.type,accessor.componentType, GL_FALSE, GLsizei(bufferView.byteStride),
                                   (const GLvoid *)byteOffset);
           }
         }
@@ -334,13 +330,12 @@ std::vector<GLuint> ViewerApplication::createVertexArrayObjects( const tinygltf:
         // Ajout aprés oublie    
         if ( primitive.indices >= 0){
           const auto accessorIdx = primitive.indices;
-          const auto &accessor = model.accessors[accessorIdx];
-          const auto &bufferView = model.bufferViews[accessor.bufferView];
-          const auto bufferIdx = bufferView.buffer;
-          // Correction de l'assert
-          assert(GL_ELEMENT_ARRAY_BUFFER  == bufferView.target);
-          const auto bufferObject = bufferObjects[bufferIdx];
-          glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,bufferObject);
+            const auto &accessor = model.accessors[accessorIdx];
+            const auto &bufferView = model.bufferViews[accessor.bufferView];
+            const auto bufferIdx = bufferView.buffer;
+            const auto bufferObject = bufferObjects[bufferIdx];
+            assert(GL_ARRAY_BUFFER == bufferView.target);
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,bufferObject);
         }
       }
     }

@@ -110,10 +110,12 @@ int ViewerApplication::run()
                 const auto &bufferView = model.bufferViews[accessor.bufferView];
                 const auto byteOffset = accessor.byteOffset + bufferView.byteOffset;
                 glDrawElements(primitive.mode, GLsizei(accessor.count), accessor.componentType, (const GLvoid *)byteOffset);
+               // std::cout << "...." << std::endl;
               } else {
                 const auto accessorIdx = (*begin(primitive.attributes)).second;
                 const auto &accessor = model.accessors[accessorIdx];
                 glDrawArrays(primitive.mode, 0, GLsizei(accessor.count));
+               // std::cout << "!!!" << std::endl;
               }
             }
             /*********/
@@ -128,6 +130,7 @@ int ViewerApplication::run()
     if (model.defaultScene >= 0) {
       // TODO Draw all nodes
       for (const auto nodeIndice : model.scenes[model.defaultScene].nodes){
+        //std::cout << "???" << std::endl;
          drawNode(nodeIndice, glm::mat4(1));
       }
     }
@@ -280,6 +283,7 @@ std::vector<GLuint> ViewerApplication::createVertexArrayObjects( const tinygltf:
   GLsizei compteur = 0;
   for (const auto &mesh : model.meshes){
     auto vaoOffset = GLsizei(vertexArrayObjects.size());
+    std::cout << vertexArrayObjects.size() << std::endl;
     meshIndexToVaoRange[compteur].begin = vaoOffset;
     auto numberOfPrimitives  = GLsizei(mesh.primitives.size());
     meshIndexToVaoRange[compteur].count = numberOfPrimitives;
@@ -337,7 +341,7 @@ std::vector<GLuint> ViewerApplication::createVertexArrayObjects( const tinygltf:
           const auto &accessor = model.accessors[accessorIdx];
           const auto &bufferView = model.bufferViews[accessor.bufferView];
           const auto bufferIdx = bufferView.buffer;
-          // Correction de l'assert
+         
           assert(GL_ELEMENT_ARRAY_BUFFER  == bufferView.target);
           const auto bufferObject = bufferObjects[bufferIdx];
           glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,bufferObject);
@@ -348,5 +352,6 @@ std::vector<GLuint> ViewerApplication::createVertexArrayObjects( const tinygltf:
     compteur++;
   }
   glBindVertexArray(0);
+    std::cout << "Number of VAOs: " << vertexArrayObjects.size() << std::endl;
   return vertexArrayObjects;
 }

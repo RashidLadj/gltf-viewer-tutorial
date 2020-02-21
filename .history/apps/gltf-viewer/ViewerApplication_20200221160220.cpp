@@ -110,10 +110,12 @@ int ViewerApplication::run()
                 const auto &bufferView = model.bufferViews[accessor.bufferView];
                 const auto byteOffset = accessor.byteOffset + bufferView.byteOffset;
                 glDrawElements(primitive.mode, GLsizei(accessor.count), accessor.componentType, (const GLvoid *)byteOffset);
+               // std::cout << "...." << std::endl;
               } else {
                 const auto accessorIdx = (*begin(primitive.attributes)).second;
                 const auto &accessor = model.accessors[accessorIdx];
                 glDrawArrays(primitive.mode, 0, GLsizei(accessor.count));
+               // std::cout << "!!!" << std::endl;
               }
             }
             /*********/
@@ -128,6 +130,7 @@ int ViewerApplication::run()
     if (model.defaultScene >= 0) {
       // TODO Draw all nodes
       for (const auto nodeIndice : model.scenes[model.defaultScene].nodes){
+        //std::cout << "???" << std::endl;
          drawNode(nodeIndice, glm::mat4(1));
       }
     }
@@ -280,6 +283,7 @@ std::vector<GLuint> ViewerApplication::createVertexArrayObjects( const tinygltf:
   GLsizei compteur = 0;
   for (const auto &mesh : model.meshes){
     auto vaoOffset = GLsizei(vertexArrayObjects.size());
+    std::cout << vertexArrayObjects.size() << std::endl;
     meshIndexToVaoRange[compteur].begin = vaoOffset;
     auto numberOfPrimitives  = GLsizei(mesh.primitives.size());
     meshIndexToVaoRange[compteur].count = numberOfPrimitives;
@@ -316,17 +320,15 @@ std::vector<GLuint> ViewerApplication::createVertexArrayObjects( const tinygltf:
             const auto bufferObject = bufferObjects[bufferIdx];// TODO get the correct buffer object from the buffer index
 
             // TODO Enable the vertex attrib array corresponding to POSITION with glEnableVertexAttribArray (you need to use VERTEX_ATTRIB_POSITION_IDX which has to be defined at the top of the cpp file)
-            // Correction de l'attribut
+            // Mon erreur etait ici
             glEnableVertexAttribArray(vertexAttrib);
-            assert(GL_ARRAY_BUFFER == bufferView.target);
             // TODO Bind the buffer object to GL_ARRAY_BUFFER
             glBindBuffer(GL_ARRAY_BUFFER, bufferObject);
 
             const auto byteOffset = accessor.byteOffset + bufferView.byteOffset;// TODO Compute the total byte offset using the accessor and the buffer view
             // TODO Call glVertexAttribPointer with the correct arguments. 
             glBindBuffer(GL_ARRAY_BUFFER, bufferObjects[bufferIdx]);
-             // Correction de l'attribut
-            glVertexAttribPointer(vertexAttrib, accessor.type,accessor.componentType, GL_FALSE, GLsizei(bufferView.byteStride),
+            glVertexAttribPointer(VERTEX_ATTRIB_NORMAL_IDX, accessor.type,accessor.componentType, GL_FALSE, GLsizei(bufferView.byteStride),
                                   (const GLvoid *)byteOffset);
           }
         }
@@ -334,13 +336,12 @@ std::vector<GLuint> ViewerApplication::createVertexArrayObjects( const tinygltf:
         // Ajout aprés oublie    
         if ( primitive.indices >= 0){
           const auto accessorIdx = primitive.indices;
-          const auto &accessor = model.accessors[accessorIdx];
-          const auto &bufferView = model.bufferViews[accessor.bufferView];
-          const auto bufferIdx = bufferView.buffer;
-          // Correction de l'assert
-          assert(GL_ELEMENT_ARRAY_BUFFER  == bufferView.target);
-          const auto bufferObject = bufferObjects[bufferIdx];
-          glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,bufferObject);
+            const auto &accessor = model.accessors[accessorIdx];
+            const auto &bufferView = model.bufferViews[accessor.bufferView];
+            const auto bufferIdx = bufferView.buffer;
+            const auto bufferObject = bufferObjects[bufferIdx];
+            assert(GL_ARRAY_BUFFER == bufferView.target);
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,bufferObject);
         }
       }
     }
