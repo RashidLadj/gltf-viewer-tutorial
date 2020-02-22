@@ -47,28 +47,23 @@ int ViewerApplication::run()
   glm::vec3 bboxMin, bboxMax;
   computeSceneBounds(model, bboxMin, bboxMax);
 
-  // Diagonal vector ??
-  const auto diag = bboxMax - bboxMin;
-
   // Build projection matrix
- // auto maxDistance = 500.f; // TODO use scene bounds instead to compute this
-  auto maxDistance = glm::length(diag) > 0 ? glm::length(diag)  : 100.f;
-  const auto projMatrix = glm::perspective(70.f, float(m_nWindowWidth) / m_nWindowHeight, 0.001f * maxDistance, 1.5f * maxDistance);
+  auto maxDistance = 500.f; // TODO use scene bounds instead to compute this
+  maxDistance = maxDistance > 0.f ? maxDistance : 100.f;
+  const auto projMatrix =
+      glm::perspective(70.f, float(m_nWindowWidth) / m_nWindowHeight,
+          0.001f * maxDistance, 1.5f * maxDistance);
 
   // TODO Implement a new CameraController model and use it instead. Propose the
   // choice from the GUI
-  FirstPersonCameraController cameraController{m_GLFWHandle.window(), 2.f * maxDistance};
+  FirstPersonCameraController cameraController{m_GLFWHandle.window(), 0.1f * maxDistance};
   if (m_hasUserCamera) {
     cameraController.setCamera(m_userCamera);
   } 
   else {
     // TODO Use scene bounds to compute a better default camera
-    // cameraController.setCamera(Camera{glm::vec3(0, 0, 0), glm::vec3(0, 0, -1), glm::vec3(0, 1, 0)});
-    const auto center = 0.5f * (bboxMax + bboxMin);
-    const auto up = glm::vec3(0, 1, 0);   
-    //const auto eye = center + diag; 
-    const auto eye =  diag.z > 0 ? center + diag : center + 2.f * glm::cross(diag, up) ;
-    cameraController.setCamera(Camera{eye, center, up});
+    cameraController.setCamera(
+        Camera{glm::vec3(0, 0, 0), glm::vec3(0, 0, -1), glm::vec3(0, 1, 0)});
   }
 
   // TODO Creation of Buffer Objects

@@ -52,12 +52,12 @@ int ViewerApplication::run()
 
   // Build projection matrix
  // auto maxDistance = 500.f; // TODO use scene bounds instead to compute this
-  auto maxDistance = glm::length(diag) > 0 ? glm::length(diag)  : 100.f;
+  auto maxDistance = glm::length(diag) > 0 ? glm::length(diag : 100.f;
   const auto projMatrix = glm::perspective(70.f, float(m_nWindowWidth) / m_nWindowHeight, 0.001f * maxDistance, 1.5f * maxDistance);
 
   // TODO Implement a new CameraController model and use it instead. Propose the
   // choice from the GUI
-  FirstPersonCameraController cameraController{m_GLFWHandle.window(), 2.f * maxDistance};
+  FirstPersonCameraController cameraController{m_GLFWHandle.window(), 0.1f * maxDistance};
   if (m_hasUserCamera) {
     cameraController.setCamera(m_userCamera);
   } 

@@ -15,7 +15,6 @@
 
 //Include for DrawNode --> calcul ModelMatrix
 #include "utils/gltf.hpp"
-#include "utils/images.hpp"
 
 void keyCallback(
     GLFWwindow *window, int key, int scancode, int action, int mods)
@@ -36,39 +35,30 @@ int ViewerApplication::run()
   const auto modelViewMatrixLocation     =glGetUniformLocation(glslProgram.glId(), "uModelViewMatrix");
   const auto normalMatrixLocation        =glGetUniformLocation(glslProgram.glId(), "uNormalMatrix");
 
-  tinygltf::Model model;  
-  // TODO Loading the glTF file
-  if (!loadGltfFile(model)){
-    std::cout << " Can't Load GltfFile !!!" << std::endl;
-    return false;
-  }
-
-  //  compute the bounding box of the scene
-  glm::vec3 bboxMin, bboxMax;
-  computeSceneBounds(model, bboxMin, bboxMax);
-
-  // Diagonal vector ??
-  const auto diag = bboxMax - bboxMin;
-
   // Build projection matrix
- // auto maxDistance = 500.f; // TODO use scene bounds instead to compute this
-  auto maxDistance = glm::length(diag) > 0 ? glm::length(diag)  : 100.f;
-  const auto projMatrix = glm::perspective(70.f, float(m_nWindowWidth) / m_nWindowHeight, 0.001f * maxDistance, 1.5f * maxDistance);
+  auto maxDistance = 500.f; // TODO use scene bounds instead to compute this
+  maxDistance = maxDistance > 0.f ? maxDistance : 100.f;
+  const auto projMatrix =
+      glm::perspective(70.f, float(m_nWindowWidth) / m_nWindowHeight,
+          0.001f * maxDistance, 1.5f * maxDistance);
 
   // TODO Implement a new CameraController model and use it instead. Propose the
   // choice from the GUI
-  FirstPersonCameraController cameraController{m_GLFWHandle.window(), 2.f * maxDistance};
+  FirstPersonCameraController cameraController{m_GLFWHandle.window(), 0.5f * maxDistance};
   if (m_hasUserCamera) {
     cameraController.setCamera(m_userCamera);
   } 
   else {
     // TODO Use scene bounds to compute a better default camera
-    // cameraController.setCamera(Camera{glm::vec3(0, 0, 0), glm::vec3(0, 0, -1), glm::vec3(0, 1, 0)});
-    const auto center = 0.5f * (bboxMax + bboxMin);
-    const auto up = glm::vec3(0, 1, 0);   
-    //const auto eye = center + diag; 
-    const auto eye =  diag.z > 0 ? center + diag : center + 2.f * glm::cross(diag, up) ;
-    cameraController.setCamera(Camera{eye, center, up});
+    cameraController.setCamera(
+        Camera{glm::vec3(0, 0, 0), glm::vec3(0, 0, -1), glm::vec3(0, 1, 0)});
+  }
+
+  tinygltf::Model model;
+  // TODO Loading the glTF file
+  if (!loadGltfFile(model)){
+    std::cout << " Can't Load GltfFile !!!" << loadGltfFile(model) << std::endl;
+    return false;
   }
 
   // TODO Creation of Buffer Objects
@@ -145,14 +135,23 @@ int ViewerApplication::run()
 
   // render in a Image
   if (!m_OutputPath.empty()) {
-    std::vector<unsigned char> pixels(3 * m_nWindowWidth * m_nWindowHeight);
-    renderToImage(m_nWindowWidth, m_nWindowHeight, 3, pixels.data(), [&]() {
-      drawScene(cameraController.getCamera());
-    });
-    flipImageYAxis(m_nWindowWidth, m_nWindowHeight, 3, pixels.data());
+    std::vector<unsigned char> RGBs(3 * m_nWindowWidth * m_nWindowHeight);
+    renderToImage(
+        m_nWindowWidth, m_nWindowHeight, numComponents, pixels.data(), [&]() {
+          const auto camera = cameraController.getCamera();
+          drawScene(camera);
+        });
+    // OpenGL has not the same convention for image axis than most image
+    // formats, so we flip on the Y axis
+    flipImageYAxis(
+        m_nWindowWidth, m_nWindowHeight, numComponents, pixels.data());
+
+    // Write png on disk
     const auto strPath = m_OutputPath.string();
-    stbi_write_png(strPath.c_str(), m_nWindowWidth, m_nWindowHeight, 3, pixels.data(), 0);
-    return 0; 
+    stbi_write_png(
+        strPath.c_str(), m_nWindowWidth, m_nWindowHeight, 3, pixels.data(), 0);
+
+    return 0; // Exit, in that mode we don't want to run interactive viewer
   }
 
   // Loop until the user closes the window

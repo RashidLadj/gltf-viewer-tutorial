@@ -146,7 +146,7 @@ private:
 class FirstPersonCameraController
 {
 public:
-  FirstPersonCameraController(GLFWwindow *window, float speed = 0.01f,
+  FirstPersonCameraController(GLFWwindow *window, float speed = 1.f,
       const glm::vec3 &worldUpAxis = glm::vec3(0, 1, 0)) :
       m_pWindow(window),
       m_fSpeed(speed),
