@@ -1,0 +1,30 @@
+#include <cameraControllerInterface.hpp>
+    
+CameraControllerInterface::CameraControllerInterface(GLFWwindow *t_window, const glm::vec3 &t_worldUpAxis, const float speed = 1.f) :
+        m_pWindow(t_window), m_worldUpAxis(t_worldUpAxis), f_mSpeed(speed),
+        m_camera(glm::vec3(0), glm::vec3(0, 0, -1), glm::vec3(0, 1, 0)) {
+};
+
+void CameraControllerInterface::setCamera(const Camera &camera) {
+    this->m_camera = camera;
+};
+
+const Camera &CameraControllerInterface::getCamera() const {
+    return this->m_camera;
+};
+
+// void CameraControllerInterface::setWorldUpAxis(const glm::vec3 &worldUpAxis) {
+//     this->m_worldUpAxis = worldUpAxis;
+// };
+
+// const glm::vec3 &CameraControllerInterface::getWorldUpAxis() const {
+//     return this->m_worldUpAxis;
+// };
+
+// glm::dvec2 CameraControllerInterface::computeCursorDelta() {
+//     glm::dvec2 cursorPosition;
+//     glfwGetCursorPos(this->window, &cursorPosition.x, &cursorPosition.y);
+//     const auto delta = cursorPosition - this->lastCursorPosition;
+//     this->lastCursorPosition = cursorPosition;
+//     return delta;
+// };

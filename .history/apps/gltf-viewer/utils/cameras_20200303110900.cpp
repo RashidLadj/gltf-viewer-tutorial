@@ -126,18 +126,18 @@ void Camera::rotateWorld(float radians, const glm::vec3 &axis){
   m_up = glm::vec3(rotationMatrix * glm::vec4(m_up, 0));
 };
 
-const glm::vec3 Camera::eye() const { return m_eye; };
+const Camera::glm::vec3 eye() const { return m_eye; };
 
-const glm::vec3 Camera::center() const { return m_center; };
+const Camera::glm::vec3 center() const { return m_center; };
 
-const glm::vec3 Camera::up() const { return m_up; };
+const Camera::glm::vec3 up() const { return m_up; };
 
-const glm::vec3 Camera::front(bool normalize = true) const{
+const Camera::glm::vec3 front(bool normalize = true) const{
   const auto f = m_center - m_eye;
   return normalize ? glm::normalize(f) : f;
 };
 
-const glm::vec3 Camera::left(bool normalize = true) const{
+const Camera::glm::vec3 left(bool normalize = true) const{
   const auto f = front(false);
   const auto l = glm::cross(m_up, f);
   return normalize ? glm::normalize(l) : l;
