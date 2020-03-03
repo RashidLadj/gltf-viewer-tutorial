@@ -1,7 +1,7 @@
 #pragma once
 
 #include <glm/glm.hpp>
-#include <cameras.hpp>
+#include "cameras.hpp"
 
 
  class CameraControllerInterface {
@@ -25,7 +25,7 @@
 
     public:
 
-        explicit CameraControllerInterface(GLFWwindow *window, const glm::vec3 &worldUpAxis = glm::vec3(0, 1, 0), const float speed = 1.f);
+        explicit CameraControllerInterface(GLFWwindow *window, const glm::vec3 &worldUpAxis = glm::vec3(0, 1, 0));
 
         virtual ~CameraControllerInterface() = default;
 
@@ -33,5 +33,5 @@
 
         const Camera &getCamera() const;
 
-        virtual bool update(GLfloat elapsedTime) = 0;
+        virtual bool update(float elapsedTime) = 0;
 };

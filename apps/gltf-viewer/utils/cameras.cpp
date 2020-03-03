@@ -132,12 +132,12 @@ const glm::vec3 Camera::center() const { return m_center; };
 
 const glm::vec3 Camera::up() const { return m_up; };
 
-const glm::vec3 Camera::front(bool normalize = true) const{
+const glm::vec3 Camera::front(bool normalize) const{
   const auto f = m_center - m_eye;
   return normalize ? glm::normalize(f) : f;
 };
 
-const glm::vec3 Camera::left(bool normalize = true) const{
+const glm::vec3 Camera::left(bool normalize) const{
   const auto f = front(false);
   const auto l = glm::cross(m_up, f);
   return normalize ? glm::normalize(l) : l;

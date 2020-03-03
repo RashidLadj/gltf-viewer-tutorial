@@ -31,11 +31,9 @@ bool TrackballCameraController::update(float elapsedTime)
     float truckLeft = 0.01f * float(cursorDelta.x);
     float pedestalUp = 0.01f * float(cursorDelta.y);
     if (!(truckLeft || pedestalUp)) {
-      std::cout << "khra" << std::endl;
       return false;
     }
      /** pan the camera (lateral movement orthogonal to the view direction) **/
-    std::cout << "lateral movement orthogonal to the view direction" << std::endl;
     this->m_camera.moveLocal(truckLeft, pedestalUp, 0.f);
     return true;
   }
@@ -46,7 +44,6 @@ bool TrackballCameraController::update(float elapsedTime)
       return false;
     }
     /** Zoom/ Unzoom **/
-    std::cout << "Zoom and Unzoom with Control" << std::endl;
     const glm::vec3 viewVector = this->m_camera.center() - this->m_camera.eye();
     const float viewVectorLength = glm::length(viewVector);
     if (mouseOffset > 0.f) {

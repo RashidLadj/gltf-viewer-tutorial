@@ -8,8 +8,10 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/io.hpp>
 
+#include "utils/cameraControllerInterface.hpp"
 #include "utils/cameras.hpp"
-
+#include "utils/TrackballCameraController.hpp"
+#include "utils/FirstPersonCameraController.hpp"
 #include <stb_image_write.h>
 #include <tiny_gltf.h>
 
@@ -52,7 +54,7 @@ int ViewerApplication::run()
 
   // Build projection matrix
  // auto maxDistance = 500.f; // TODO use scene bounds instead to compute this
-  auto maxDistance = glm::length(diagVector) > 0 ? glm::length(diagVector)  : 100.f;
+  float maxDistance = glm::length(diagVector) > 0 ? glm::length(diagVector)  : 100.f;
   const auto projMatrix = glm::perspective(70.f, float(m_nWindowWidth) / m_nWindowHeight, 0.001f * maxDistance, 1.5f * maxDistance);
 
   // TODO Implement a new CameraController model and use it instead. Propose the
@@ -60,11 +62,11 @@ int ViewerApplication::run()
  // FirstPersonCameraController cameraController{m_GLFWHandle.window(), 2.f * maxDistance};
  /** Replace FirstPersonCamera With TrackballCamera**/
   //TrackballCameraController cameraController{m_GLFWHandle.window(), 2.f * maxDistance};
-  std::unique_ptr<CameraControllerInterface> CameraControllerInterface = std::make_unique<TrackballCameraController>(
-    m_GLFWHandle.window(), 0.5f * maxDistance);
+  std::unique_ptr<CameraControllerInterface> cameraController = std::make_unique<TrackballCameraController>(
+    m_GLFWHandle.window());
     
   if (m_hasUserCamera) {
-    cameraController.setCamera(m_userCamera);
+    cameraController->setCamera(m_userCamera);
   } 
   else {
     // TODO Use scene bounds to compute a better default camera
@@ -74,7 +76,7 @@ int ViewerApplication::run()
     //const auto eye = center + diag; 
     // When handle flat scenes on the z axis
     const auto eye =  diagVector.z > 0 ? center + diagVector : center + 2.f * glm::cross(diagVector, up) ;
-    cameraController.setCamera(Camera{eye, center, up});
+    cameraController->setCamera(Camera{eye, center, up});
   }
 
   // TODO Creation of Buffer Objects
@@ -153,7 +155,7 @@ int ViewerApplication::run()
   if (!m_OutputPath.empty()) {
     std::vector<unsigned char> pixels(3 * m_nWindowWidth * m_nWindowHeight);
     renderToImage(m_nWindowWidth, m_nWindowHeight, 3, pixels.data(), [&]() {
-      drawScene(cameraController.getCamera());
+      drawScene(cameraController->getCamera());
     });
     flipImageYAxis(m_nWindowWidth, m_nWindowHeight, 3, pixels.data());
     const auto strPath = m_OutputPath.string();
@@ -165,7 +167,7 @@ int ViewerApplication::run()
   for (auto iterationCount = 0u; !m_GLFWHandle.shouldClose(); ++iterationCount) {
     const auto seconds = glfwGetTime();
 
-    const auto camera = cameraController.getCamera();
+    const auto camera = cameraController->getCamera();
     drawScene(camera);
 
     // GUI code:
@@ -197,6 +199,26 @@ int ViewerApplication::run()
           const auto str = ss.str();
           glfwSetClipboardString(m_GLFWHandle.window(), str.c_str());
         }
+
+        /** 0->First   1-Trackball **/
+        static int cameraControllerType = 0;
+        const bool cameraControllerTypeChanged =
+                ImGui::RadioButton("First Person", &cameraControllerType, 0) ||
+                ImGui::RadioButton("Trackball", &cameraControllerType, 1);
+        if (cameraControllerTypeChanged) {
+            const Camera currentCamera = cameraController->getCamera();
+            if (cameraControllerType == 0) {
+                cameraController = std::make_unique<FirstPersonCameraController>(
+                        m_GLFWHandle.window(), 0.5f * maxDistance
+                );
+            }
+            else {
+                cameraController = std::make_unique<TrackballCameraController>(
+                        m_GLFWHandle.window()
+                );
+            }
+            cameraController->setCamera(currentCamera);
+        }
       }
       ImGui::End();
     }
@@ -209,7 +231,7 @@ int ViewerApplication::run()
     auto guiHasFocus =
         ImGui::GetIO().WantCaptureMouse || ImGui::GetIO().WantCaptureKeyboard;
     if (!guiHasFocus) {
-      cameraController.update(float(ellapsedTime));
+      cameraController->update(float(ellapsedTime));
     }
 
     m_GLFWHandle.swapBuffers(); // Swap front and back buffers

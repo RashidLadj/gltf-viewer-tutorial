@@ -2,7 +2,7 @@
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
-#include <cameraControllerInterface.hpp>
+#include "cameraControllerInterface.hpp"
 #include "glfw.hpp"
 
 #include <iostream>
@@ -17,7 +17,8 @@ class FirstPersonCameraController : public CameraControllerInterface{
     explicit FirstPersonCameraController(
       GLFWwindow *window,
       float speed = 0.01f,
-      const glm::vec3 &worldUpAxis = glm::vec3(0, 1, 0));
+      const glm::vec3 &worldUpAxis = glm::vec3(0, 1, 0)
+      );
 
     // Controller attributes, if put in a GUI, should be adapted
     void setSpeed(float speed);

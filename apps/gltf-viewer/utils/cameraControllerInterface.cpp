@@ -1,6 +1,6 @@
-#include <cameraControllerInterface.hpp>
+#include "cameraControllerInterface.hpp"
     
-CameraControllerInterface::CameraControllerInterface(GLFWwindow *t_window, const glm::vec3 &t_worldUpAxis, const float speed = 1.f) :
+CameraControllerInterface::CameraControllerInterface(GLFWwindow *t_window, const glm::vec3 &t_worldUpAxis) :
         m_pWindow(t_window), m_worldUpAxis(t_worldUpAxis),
         m_camera(glm::vec3(0), glm::vec3(0, 0, -1), glm::vec3(0, 1, 0)) {
 };

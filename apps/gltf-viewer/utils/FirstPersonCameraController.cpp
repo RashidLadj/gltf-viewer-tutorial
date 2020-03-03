@@ -10,8 +10,8 @@ using namespace glm;
 
 FirstPersonCameraController::FirstPersonCameraController(
   GLFWwindow *window,
-  float speed = 0.01f,
-  const glm::vec3 &worldUpAxis = glm::vec3(0, 1, 0)) 
+  float speed,
+  const glm::vec3 &worldUpAxis) 
   : CameraControllerInterface(window, worldUpAxis), m_fSpeed(speed){
 };
 
