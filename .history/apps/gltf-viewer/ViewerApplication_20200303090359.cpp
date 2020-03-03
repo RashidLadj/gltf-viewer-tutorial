@@ -58,7 +58,6 @@ int ViewerApplication::run()
   // TODO Implement a new CameraController model and use it instead. Propose the
   // choice from the GUI
  // FirstPersonCameraController cameraController{m_GLFWHandle.window(), 2.f * maxDistance};
- /** Replace FirstPersonCamera With TrackballCamera**/
   TrackballCameraController cameraController{m_GLFWHandle.window(), 2.f * maxDistance};
   if (m_hasUserCamera) {
     cameraController.setCamera(m_userCamera);
@@ -69,7 +68,6 @@ int ViewerApplication::run()
     const auto center = 0.5f * (bboxMax + bboxMin);
     const auto up = glm::vec3(0, 1, 0);   
     //const auto eye = center + diag; 
-    // When handle flat scenes on the z axis
     const auto eye =  diagVector.z > 0 ? center + diagVector : center + 2.f * glm::cross(diagVector, up) ;
     cameraController.setCamera(Camera{eye, center, up});
   }

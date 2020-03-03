@@ -174,12 +174,12 @@ bool TrackballCameraController::update(float elapsedTime)
       return false;
   }
 
-  const auto depthAxis = this->m_camera.eye() - this->m_camera.center();
-  const auto latitudeRotationMatrix = rotate(glm::mat4(1), latitudeAngle, this->m_worldUpAxis);
-  const auto horizontalAxis = m_camera.left();
-  const auto rotationMatrix = rotate(latitudeRotationMatrix, longitudeAngle, horizontalAxis);
-  const auto rotatedDepthAxis = glm::vec3(rotationMatrix * glm::vec4(depthAxis, 0));
-  const auto newEye = this->m_camera.center() + rotatedDepthAxis;
+  const glm::vec3 depthAxis = this->m_camera.eye() - this->m_camera.center();
+  const glm::mat4 latitudeRotationMatrix = rotate(glm::mat4(1), latitudeAngle, this->m_worldUpAxis);
+  const glm::vec3 horizontalAxis = m_camera.left();
+  const glm::mat4 rotationMatrix = rotate(latitudeRotationMatrix, longitudeAngle, horizontalAxis);
+  const glm::vec3 rotatedDepthAxis = glm::vec3(rotationMatrix * glm::vec4(depthAxis, 0));
+  const glm::vec3 newEye = this->m_camera.center() + rotatedDepthAxis;
 
   this->m_camera = Camera(newEye, this->m_camera.center(), this->m_worldUpAxis);
 

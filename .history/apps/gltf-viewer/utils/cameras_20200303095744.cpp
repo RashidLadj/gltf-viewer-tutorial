@@ -150,13 +150,15 @@ bool TrackballCameraController::update(float elapsedTime)
     }
     /** Zoom/ Unzoom **/
     std::cout << "Zoom and Unzoom with Control" << std::endl;
+    
+    // todo Implement zoom
     const glm::vec3 viewVector = this->m_camera.center() - this->m_camera.eye();
-    const float viewVectorLength = glm::length(viewVector);
+    const float viewVectorLenght = glm::length(viewVector);
     if (mouseOffset > 0.f) {
-        mouseOffset = glm::min(mouseOffset, viewVectorLength - 1e-4f);
+        mouseOffset = glm::min(mouseOffset, l - 1e-4f);
     }
 
-    const glm::vec3 front = viewVector / viewVectorLength;
+    const glm::vec3 front = viewVector / l;
     const glm::vec3 translationVector = mouseOffset * front;
 
     // Update camera with new eye position
@@ -174,14 +176,34 @@ bool TrackballCameraController::update(float elapsedTime)
       return false;
   }
 
-  const auto depthAxis = this->m_camera.eye() - this->m_camera.center();
-  const auto latitudeRotationMatrix = rotate(glm::mat4(1), latitudeAngle, this->m_worldUpAxis);
-  const auto horizontalAxis = m_camera.left();
-  const auto rotationMatrix = rotate(latitudeRotationMatrix, longitudeAngle, horizontalAxis);
-  const auto rotatedDepthAxis = glm::vec3(rotationMatrix * glm::vec4(depthAxis, 0));
-  const auto newEye = this->m_camera.center() + rotatedDepthAxis;
+  const glm::vec3 depthAxis = this->m_camera.eye() - this->m_camera.center();
+  const glm::mat4 latitudeRotationMatrix = rotate(glm::mat4(1), latitudeAngle, this->m_worldUpAxis);
+  const glm::vec3 horizontalAxis = m_camera.left();
+  const glm::mat4 rotationMatrix = rotate(latitudeRotationMatrix, longitudeAngle, horizontalAxis);
+  const glm::vec3 rotatedDepthAxis = glm::vec3(rotationMatrix * glm::vec4(depthAxis, 0));
+  const glm::vec3 newEye = this->m_camera.center() + rotatedDepthAxis;
 
-  this->m_camera = Camera(newEye, this->m_camera.center(), this->m_worldUpAxis);
+  m_camera = Camera(newEye, this->m_camera.center(), this->m_worldUpAxis);
+
+
+  
 
   return true;
+
+
+
+  // // cursor going right, so minus because we want pan left angle:
+  // const float panLeftAngle = -0.01f * float(cursorDelta.x);
+  // const float tiltDownAngle = 0.01f * float(cursorDelta.y);
+
+  // const auto hasMoved = truckLeft || pedestalUp || dollyIn || panLeftAngle ||
+  //                       tiltDownAngle || rollRightAngle;
+  // if (!hasMoved) {
+  //   return false;
+  // }
+
+  // m_camera.moveLocal(truckLeft, pedestalUp, dollyIn);
+  // m_camera.rotateLocal(rollRightAngle, tiltDownAngle, 0.f);
+  // m_camera.rotateWorld(panLeftAngle, m_worldUpAxis);
+
 }

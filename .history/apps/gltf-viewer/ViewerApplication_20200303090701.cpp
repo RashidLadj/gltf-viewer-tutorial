@@ -58,7 +58,6 @@ int ViewerApplication::run()
   // TODO Implement a new CameraController model and use it instead. Propose the
   // choice from the GUI
  // FirstPersonCameraController cameraController{m_GLFWHandle.window(), 2.f * maxDistance};
- /** Replace FirstPersonCamera With TrackballCamera**/
   TrackballCameraController cameraController{m_GLFWHandle.window(), 2.f * maxDistance};
   if (m_hasUserCamera) {
     cameraController.setCamera(m_userCamera);
