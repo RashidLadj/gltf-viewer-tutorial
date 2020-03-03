@@ -59,10 +59,7 @@ int ViewerApplication::run()
   // choice from the GUI
  // FirstPersonCameraController cameraController{m_GLFWHandle.window(), 2.f * maxDistance};
  /** Replace FirstPersonCamera With TrackballCamera**/
-  //TrackballCameraController cameraController{m_GLFWHandle.window(), 2.f * maxDistance};
-  std::unique_ptr<CameraControllerInterface> CameraControllerInterface = std::make_unique<TrackballCameraController>(
-    m_GLFWHandle.window(), 0.5f * maxDistance);
-    
+  TrackballCameraController cameraController{m_GLFWHandle.window(), 2.f * maxDistance};
   if (m_hasUserCamera) {
     cameraController.setCamera(m_userCamera);
   } 
