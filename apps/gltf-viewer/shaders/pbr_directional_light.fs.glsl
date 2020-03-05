@@ -23,6 +23,7 @@ const float GAMMA = 2.2;
 const float INV_GAMMA = 1. / GAMMA;
 const float M_PI = 3.141592653589793;
 const float M_1_PI = 1.0 / M_PI;
+
 const vec3 dielectricSpecular = vec3(0.04, 0.04, 0.04);
 const vec3 black = vec3(0, 0, 0);
 
@@ -96,6 +97,6 @@ void main(){
     vec4 emissiveRougnessFromTexture = SRGBtoLINEAR(texture(uEmissiveTexture, vTexCoords));
     vec3 emissive = uEmissiveFactor * emissiveRougnessFromTexture.rgb;
 
-    fColor = LINEARtoSRGB((f_diffuse + f_specular) * uLightIntensity * NdotL ) ;
+    fColor = LINEARtoSRGB((f_diffuse + f_specular) * uLightIntensity * NdotL + emissive) ;
 
 }
