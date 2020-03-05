@@ -34,11 +34,20 @@ int ViewerApplication::run()
       compileProgram({m_ShadersRootPath / m_AppName / m_vertexShader,
           m_ShadersRootPath / m_AppName / m_fragmentShader});
 
-  const auto modelViewProjMatrixLocation =glGetUniformLocation(glslProgram.glId(), "uModelViewProjMatrix");
-  const auto modelViewMatrixLocation     =glGetUniformLocation(glslProgram.glId(), "uModelViewMatrix");
-  const auto normalMatrixLocation        =glGetUniformLocation(glslProgram.glId(), "uNormalMatrix");
-  const auto uLightDirectionLocation     =glGetUniformLocation(glslProgram.glId(), "uLightDirection");
-  const auto uLightIntensity             =glGetUniformLocation(glslProgram.glId(), "uLightIntensity");
+  const auto modelViewProjMatrixLocation = glGetUniformLocation(glslProgram.glId(), "uModelViewProjMatrix");
+  const auto modelViewMatrixLocation     = glGetUniformLocation(glslProgram.glId(), "uModelViewMatrix");
+  const auto normalMatrixLocation        = glGetUniformLocation(glslProgram.glId(), "uNormalMatrix");
+  const auto uLightDirectionLocation     = glGetUniformLocation(glslProgram.glId(), "uLightDirection");
+  const auto uLightIntensity             = glGetUniformLocation(glslProgram.glId(), "uLightIntensity");
+  const auto uBaseColorTexture           = glGetUniformLocation(glslProgram.glId(), "uBaseColorTexture");
+  const auto uBaseColorFactor            = glGetUniformLocation(glslProgram.glId(), "uBaseColorFactor");
+
+  const auto uMetallicFactor             = glGetUniformLocation(glslProgram.glId(), "uMetallicFactor");
+  const auto uMetallicRoughnessTexture   = glGetUniformLocation(glslProgram.glId(), "uMetallicRoughnessTexture");
+  const auto uRoughnessFactor            = glGetUniformLocation(glslProgram.glId(), "uRoughnessFactor");
+
+  const auto uEmissiveFactor             = glGetUniformLocation(glslProgram.glId(), "uEmissiveFactor");
+  const auto uEmissiveTexture            = glGetUniformLocation(glslProgram.glId(), "uEmissiveTexture");
 
   tinygltf::Model model;  
   // TODO Loading the glTF file
@@ -84,6 +93,20 @@ int ViewerApplication::run()
   auto lightDirection = glm::vec3(1.f);
   auto lightIntensity = glm::vec3(1.f);
   bool lightFromCamera = false;
+
+  const std::vector<GLuint> textureObjects = createTextureObjects(model);
+  float white[] = { 1, 1, 1, 1 };
+  GLuint whiteTexture = 0;
+  glGenTextures(1, &whiteTexture);
+  glBindTexture(GL_TEXTURE_2D, whiteTexture);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1, 1, 0, GL_RGBA, GL_FLOAT, white);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_REPEAT);
+  glBindTexture(GL_TEXTURE_2D, 0);
+
   // TODO Creation of Buffer Objects
   const auto bufferObjects = createBufferObjects(model);
 
@@ -95,7 +118,111 @@ int ViewerApplication::run()
   glEnable(GL_DEPTH_TEST);
   glslProgram.use();
 
-  // Lambda function to draw the scene
+  /** Lambda function to draw the scene **/
+  const auto bindMaterial = [&](const auto materialIndex) {
+    // Material binding
+    if(materialIndex>=0){
+      // only valid is materialIndex >= 0
+      const auto &material = model.materials[materialIndex];
+      const auto &pbrMetallicRoughness = material.pbrMetallicRoughness;
+
+       if (uBaseColorTexture >= 0) {
+          auto textureObject = whiteTexture;
+          const auto baseColorTextureIndex = pbrMetallicRoughness.baseColorTexture.index;
+          if (baseColorTextureIndex >= 0) {
+            // only valid if pbrMetallicRoughness.baseColorTexture.index >= 0:
+            const tinygltf::Texture &texture = model.textures[baseColorTextureIndex];
+            if (texture.source >= 0) {
+                textureObject = textureObjects[texture.source];
+            }
+          }
+          glActiveTexture(GL_TEXTURE0);
+          glBindTexture(GL_TEXTURE_2D, textureObject);
+          glUniform1i(uBaseColorTexture, 0);
+      }
+      if (uBaseColorFactor >= 0) {
+        /** Convertion impossible de double en float -> so je passe à la formule qui est chiante **/
+        //glUniform4fv(uBaseColorFactor, 1, glm::value_ptr(pbrMetallicRoughness.baseColorFactor));
+        glm::vec4 baseColorfactor =glm::vec4(float(pbrMetallicRoughness.baseColorFactor[0]),
+                float(pbrMetallicRoughness.baseColorFactor[1]),
+                float(pbrMetallicRoughness.baseColorFactor[2]),
+                float(pbrMetallicRoughness.baseColorFactor[3])
+        );
+        glUniform4fv(uBaseColorFactor, 1, glm::value_ptr(baseColorfactor));
+      }
+      if (uMetallicRoughnessTexture >= 0) {
+        GLuint textureObject = 0;
+        const auto pbrMetallicRoughnessIndex = pbrMetallicRoughness.metallicRoughnessTexture.index;
+        if (pbrMetallicRoughnessIndex >= 0) {
+            const tinygltf::Texture &texture = model.textures[pbrMetallicRoughnessIndex];
+            if (texture.source >= 0) {
+                textureObject = textureObjects[texture.source];
+            }
+        }
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, textureObject);
+        glUniform1i(uMetallicRoughnessTexture, 1);
+      }
+      if (uMetallicFactor >= 0) {
+        glUniform1f(uMetallicFactor, float(pbrMetallicRoughness.metallicFactor));
+      }
+      if (uEmissiveFactor >= 0) {
+        glm::vec3 emissiveFact =glm::vec3(float(material.emissiveFactor[0]),
+                float(material.emissiveFactor[1]),
+                float(material.emissiveFactor[2])
+        );
+        glUniform3fv(uEmissiveFactor, 1, glm::value_ptr(emissiveFact));
+      }
+      if (uEmissiveTexture >= 0) {
+        GLuint textureObject = 0;
+        const auto EmissiveIndex = material.emissiveTexture.index;
+        if (EmissiveIndex >= 0) {
+            const tinygltf::Texture &texture = model.textures[EmissiveIndex];
+            if (texture.source >= 0) {
+                textureObject = textureObjects[texture.source];
+            }
+        }
+        glActiveTexture(GL_TEXTURE2);
+        glBindTexture(GL_TEXTURE_2D, textureObject);
+        glUniform1i(uMetallicRoughnessTexture, 2);
+      }
+    }
+    else{
+      if (uBaseColorTexture >= 0) {
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, whiteTexture);
+        glUniform1i(uBaseColorTexture, 0);
+      }
+      if (uBaseColorFactor >= 0) {
+        if (uBaseColorFactor >= 0) {
+          glUniform4f(uBaseColorFactor, 1, 1, 1, 1);
+        }
+      }
+      if (uMetallicRoughnessTexture >= 0) {
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, 0);
+        glUniform1i(uMetallicRoughnessTexture, 1);
+      }
+      if (uMetallicFactor >= 0) {
+          glUniform1f(uMetallicFactor, 1.f);
+      }
+      if (uRoughnessFactor >= 0) {
+          glUniform1f(uRoughnessFactor, 1.f);
+      }
+      if (uEmissiveFactor >= 0) {
+        glm::vec3 emissiveFact =glm::vec3(1.f);
+        glUniform3fv(uEmissiveFactor, 1, glm::value_ptr(emissiveFact));
+      }
+      if (uEmissiveTexture >= 0) {
+         glActiveTexture(GL_TEXTURE2);
+        glBindTexture(GL_TEXTURE_2D, 0);
+        glUniform1i(uMetallicRoughnessTexture, 2);
+      }
+    }
+
+  };
+
+  /** Lambda function to draw the scene **/
   const auto drawScene = [&](const Camera &camera) {
     glViewport(0, 0, m_nWindowWidth, m_nWindowHeight);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -137,6 +264,7 @@ int ViewerApplication::run()
             for (size_t primitiveIndice = 0; primitiveIndice < mesh.primitives.size(); ++primitiveIndice) {
               const auto vao = vertexArrayObjects[vaoRange.begin + primitiveIndice];
               const auto &primitive = mesh.primitives[primitiveIndice];
+              bindMaterial(primitive.material);  
               glBindVertexArray(vao);
               if (primitive.indices >= 0) {
                 const auto &accessor = model.accessors[primitive.indices];
@@ -437,4 +565,42 @@ std::vector<GLuint> ViewerApplication::createVertexArrayObjects( const tinygltf:
   }
   glBindVertexArray(0);
   return vertexArrayObjects;
+}
+
+std::vector<GLuint> ViewerApplication::createTextureObjects(const tinygltf::Model &model) const{
+  std::vector<GLuint> textureObjects(model.textures.size(), 0);
+
+  /** Definition Default Simpler dans le cas ou ils ne sont pas definit dans le model **/
+  tinygltf::Sampler defaultSampler;
+  defaultSampler.minFilter = GL_LINEAR;
+  defaultSampler.magFilter = GL_LINEAR;
+  defaultSampler.wrapS = GL_REPEAT; 
+  defaultSampler.wrapT = GL_REPEAT;
+  defaultSampler.wrapR = GL_REPEAT;
+
+  glActiveTexture(GL_TEXTURE0);
+  glGenTextures(GLsizei(model.textures.size()), textureObjects.data());
+
+  for (size_t i = 0; i < model.textures.size(); ++i) {
+      const auto &texture = model.textures[i];
+      assert(texture.source >= 0); // ensure a source image is present
+      const auto &image = model.images[texture.source];
+      const auto &sampler = texture.sampler >= 0 ? model.samplers[texture.sampler] : defaultSampler;
+      glBindTexture(GL_TEXTURE_2D, textureObjects[i]);
+      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image.width, image.height, 0, GL_RGBA, image.pixel_type,image.image.data());
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, sampler.minFilter != -1 ? sampler.minFilter : GL_LINEAR);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, sampler.magFilter != -1 ? sampler.magFilter : GL_LINEAR);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, sampler.wrapS);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, sampler.wrapT);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, sampler.wrapR);
+
+      if (sampler.minFilter == GL_NEAREST_MIPMAP_NEAREST
+          || sampler.minFilter == GL_NEAREST_MIPMAP_LINEAR
+          || sampler.minFilter == GL_LINEAR_MIPMAP_NEAREST
+          || sampler.minFilter == GL_LINEAR_MIPMAP_LINEAR) {
+          glGenerateMipmap(GL_TEXTURE_2D);
+      }
+  }
+  glBindTexture(GL_TEXTURE_2D, 0);
+  return textureObjects;
 }
