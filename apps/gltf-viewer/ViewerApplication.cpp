@@ -19,6 +19,11 @@
 #include "utils/gltf.hpp"
 #include "utils/images.hpp"
 
+////////////////////////////////////////////////
+/// OpenGL project
+/// Ladjouli Rashid & Jarcet Eliot
+////////////////////////////////////////////////
+
 void keyCallback(
     GLFWwindow *window, int key, int scancode, int action, int mods)
 {
