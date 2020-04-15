@@ -3,6 +3,10 @@
 in vec3 vViewSpacePosition;
 in vec3 vViewSpaceNormal;
 in vec2 vTexCoords;
+in mat3 TBN;
+
+in vec3 vTangent;
+
 
 uniform vec3 uLightDirection;
 uniform vec3 uLightIntensity;
@@ -15,6 +19,8 @@ uniform sampler2D uMetallicRoughnessTexture;
 
 uniform vec3 uEmissiveFactor; 
 uniform sampler2D uEmissiveTexture;
+
+uniform sampler2D uNormalTexture;
 
 out vec3 fColor;
 
@@ -44,7 +50,13 @@ vec4 SRGBtoLINEAR(vec4 srgbIn){
 }
 
 void main(){
-    vec3 N = normalize(vViewSpaceNormal);
+
+    //NORMAL MAPPING//
+    //vec3 N = texture(uNormalTexture, vTexCoords).rgb;//normalize(vViewSpaceNormal);
+    //N = normalize(N * 2.0 - 1.0);   
+    //N = (vViewSpaceNormal + N)/2;
+    vec3 N = vViewSpaceNormal;
+    
     vec3 L = uLightDirection; 
     vec3 V = normalize(-vViewSpacePosition);
     vec3 H = normalize(L + V);
@@ -97,6 +109,5 @@ void main(){
     vec4 emissiveRougnessFromTexture = SRGBtoLINEAR(texture(uEmissiveTexture, vTexCoords));
     vec3 emissive = uEmissiveFactor * emissiveRougnessFromTexture.rgb;
 
-    fColor = LINEARtoSRGB((f_diffuse + f_specular) * uLightIntensity * NdotL + emissive) ;
-
+    fColor = vTangent;//LINEARtoSRGB((f_diffuse + f_specular) * uLightIntensity * NdotL + emissive) ;
 }

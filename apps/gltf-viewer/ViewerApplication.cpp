@@ -40,32 +40,37 @@ int ViewerApplication::run()
       compileProgram({m_ShadersRootPath / m_AppName / m_vertexShader,
           m_ShadersRootPath / m_AppName / m_fragmentShader});
 
-  const auto modelViewProjMatrix =
+  const auto modelMatrixLocation =
+      glGetUniformLocation(glslProgram.glId(), "uModelMatrix");
+  const auto modelViewProjMatrixLocation =
       glGetUniformLocation(glslProgram.glId(), "uModelViewProjMatrix");
-  const auto modelViewMatrix =
+  const auto modelViewMatrixLocation =
       glGetUniformLocation(glslProgram.glId(), "uModelViewMatrix");
-  const auto normalMatrix =
+  const auto normalMatrixLocation =
       glGetUniformLocation(glslProgram.glId(), "uNormalMatrix");
-  const auto uLightDirection =
+  const auto lightDirectionLocation =
       glGetUniformLocation(glslProgram.glId(), "uLightDirection");
-  const auto uLightIntensity =
+  const auto lightIntensityLocation =
       glGetUniformLocation(glslProgram.glId(), "uLightIntensity");
-  const auto uBaseColorTexture =
+  const auto baseColorTextureLocation =
       glGetUniformLocation(glslProgram.glId(), "uBaseColorTexture");
-  const auto uBaseColorFactor =
+  const auto baseColorFactorLocation =
       glGetUniformLocation(glslProgram.glId(), "uBaseColorFactor");
 
-  const auto uMetallicFactor =
+  const auto metallicFactorLocation =
       glGetUniformLocation(glslProgram.glId(), "uMetallicFactor");
-  const auto uMetallicRoughnessTexture =
+  const auto metallicRoughnessTextureLocation =
       glGetUniformLocation(glslProgram.glId(), "uMetallicRoughnessTexture");
-  const auto uRoughnessFactor =
+  const auto roughnessFactorLocation =
       glGetUniformLocation(glslProgram.glId(), "uRoughnessFactor");
 
-  const auto uEmissiveFactor =
+  const auto emissiveFactorLocation =
       glGetUniformLocation(glslProgram.glId(), "uEmissiveFactor");
-  const auto uEmissiveTexture =
+  const auto emissiveTextureLocation =
       glGetUniformLocation(glslProgram.glId(), "uEmissiveTexture");
+
+  const auto normalTextureLocation =
+      glGetUniformLocation(glslProgram.glId(), "uNormalTexture");
 
   tinygltf::Model model;
   // TODO Loading the glTF file
@@ -132,135 +137,28 @@ int ViewerApplication::run()
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_REPEAT);
   glBindTexture(GL_TEXTURE_2D, 0);
 
-  // TODO Creation of Buffer Objects
-  const auto bufferObjects = createBufferObjects(model);
+  // Creation of Buffer Objects
+  size_t vertexNumber;
 
-  // TODO Creation of Vertex Array Objects
+  const auto bufferObjects = createBufferObjects(model, vertexNumber);
+
+  std::cout << "vertex number : " << vertexNumber << std::endl;
+  // Creation of Vertex Array Objects
   std::vector<VaoRange> meshToVertexArrays;
-  const auto vertexArrayObjects =
-      createVertexArrayObjects(model, bufferObjects, meshToVertexArrays);
+  const auto vertexArrayObjects = createVertexArrayObjects(
+      model, bufferObjects, meshToVertexArrays, vertexNumber);
 
   // Setup OpenGL state for rendering
   glEnable(GL_DEPTH_TEST);
   glslProgram.use();
 
-  /** Lambda function to draw the scene **/
-
-  // Old bindTexture, there is a pb inside --> to debug
-
-  /*
-  const auto bindMaterial = [&](const auto materialIndex) {
-    // Material binding
-    if(materialIndex>=0){
-      // only valid is materialIndex >= 0
-      const auto &material = model.materials[materialIndex];
-      const auto &pbrMetallicRoughness = material.pbrMetallicRoughness;
-       if (uBaseColorTexture >= 0) {
-          auto textureObject = whiteTexture;
-          const auto baseColorTextureIndex =
-  pbrMetallicRoughness.baseColorTexture.index; if (baseColorTextureIndex >= 0) {
-            // only valid if pbrMetallicRoughness.baseColorTexture.index >= 0:
-            const tinygltf::Texture &texture =
-  model.textures[baseColorTextureIndex]; if (texture.source >= 0) {
-                textureObject = textureObjects[texture.source];
-            }
-          }
-          glActiveTexture(GL_TEXTURE0);
-          glBindTexture(GL_TEXTURE_2D, textureObject);
-          glUniform1i(uBaseColorTexture, 0);
-      }
-      if (uBaseColorFactor >= 0) {
-        // Convertion impossible de double en float -> so je passe à la formule
-  qui est chiante
-        //glUniform4fv(uBaseColorFactor, 1,
-  glm::value_ptr(pbrMetallicRoughness.baseColorFactor)); glm::vec4
-  baseColorfactor =glm::vec4(float(pbrMetallicRoughness.baseColorFactor[0]),
-                float(pbrMetallicRoughness.baseColorFactor[1]),
-                float(pbrMetallicRoughness.baseColorFactor[2]),
-                float(pbrMetallicRoughness.baseColorFactor[3])
-        );
-        glUniform4fv(uBaseColorFactor, 1, glm::value_ptr(baseColorfactor));
-      }
-      if (uMetallicRoughnessTexture >= 0) {
-        GLuint textureObject = 0;
-        const auto pbrMetallicRoughnessIndex =
-  pbrMetallicRoughness.metallicRoughnessTexture.index; if
-  (pbrMetallicRoughnessIndex >= 0) { const tinygltf::Texture &texture =
-  model.textures[pbrMetallicRoughnessIndex]; if (texture.source >= 0) {
-                textureObject = textureObjects[texture.source];
-            }
-        }
-        glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, textureObject);
-        glUniform1i(uMetallicRoughnessTexture, 1);
-      }
-      if (uMetallicFactor >= 0) {
-        glUniform1f(uMetallicFactor,
-  float(pbrMetallicRoughness.metallicFactor));
-      }
-      if (uEmissiveFactor >= 0) {
-        glm::vec3 emissiveFact =glm::vec3(float(material.emissiveFactor[0]),
-                float(material.emissiveFactor[1]),
-                float(material.emissiveFactor[2])
-        );
-        glUniform3fv(uEmissiveFactor, 1, glm::value_ptr(emissiveFact));
-      }
-      if (uEmissiveTexture >= 0) {
-        GLuint textureObject = 0;
-        const auto EmissiveIndex = material.emissiveTexture.index;
-        if (EmissiveIndex >= 0) {
-            const tinygltf::Texture &texture = model.textures[EmissiveIndex];
-            if (texture.source >= 0) {
-                textureObject = textureObjects[texture.source];
-            }
-        }
-        glActiveTexture(GL_TEXTURE2);
-        glBindTexture(GL_TEXTURE_2D, textureObject);
-        glUniform1i(uMetallicRoughnessTexture, 2);
-      }
-    }
-    else{
-      if (uBaseColorTexture >= 0) {
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, whiteTexture);
-        glUniform1i(uBaseColorTexture, 0);
-      }
-      if (uBaseColorFactor >= 0) {
-        if (uBaseColorFactor >= 0) {
-          glUniform4f(uBaseColorFactor, 1, 1, 1, 1);
-        }
-      }
-      if (uMetallicRoughnessTexture >= 0) {
-        glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, 0);
-        glUniform1i(uMetallicRoughnessTexture, 1);
-      }
-      if (uMetallicFactor >= 0) {
-          glUniform1f(uMetallicFactor, 1.f);
-      }
-      if (uRoughnessFactor >= 0) {
-          glUniform1f(uRoughnessFactor, 1.f);
-      }
-      if (uEmissiveFactor >= 0) {
-        glm::vec3 emissiveFact =glm::vec3(1.f);
-        glUniform3fv(uEmissiveFactor, 1, glm::value_ptr(emissiveFact));
-      }
-      if (uEmissiveTexture >= 0) {
-         glActiveTexture(GL_TEXTURE2);
-        glBindTexture(GL_TEXTURE_2D, 0);
-        glUniform1i(uMetallicRoughnessTexture, 2);
-      }
-    }
-*/
-
-  // Eliot's bindMaterial(), not the best architecture but working
   const auto bindMaterial = [&](const auto materialIndex) {
     if (materialIndex >= 0) {
       // only valid is materialIndex >= 0
       const auto &material = model.materials[materialIndex];
       const auto &pbrMetallicRoughness = material.pbrMetallicRoughness;
 
-      if (uBaseColorTexture >= 0) {
+      if (baseColorTextureLocation >= 0) {
         auto textureObject = whiteTexture;
         const auto baseColorTextureIndex =
             pbrMetallicRoughness.baseColorTexture.index;
@@ -274,26 +172,26 @@ int ViewerApplication::run()
         }
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, textureObject);
-        glUniform1i(uBaseColorTexture, 0);
+        glUniform1i(baseColorTextureLocation, 0);
       }
 
-      if (uBaseColorFactor >= 0) {
-        glUniform4f(uBaseColorFactor,
+      if (baseColorFactorLocation >= 0) {
+        glUniform4f(baseColorFactorLocation,
             (float)pbrMetallicRoughness.baseColorFactor[0],
             (float)pbrMetallicRoughness.baseColorFactor[1],
             (float)pbrMetallicRoughness.baseColorFactor[2],
             (float)pbrMetallicRoughness.baseColorFactor[3]);
       }
 
-      if (uMetallicFactor >= 0) {
+      if (metallicFactorLocation >= 0) {
         glUniform1f(
-            uMetallicFactor, (float)pbrMetallicRoughness.metallicFactor);
+            metallicFactorLocation, (float)pbrMetallicRoughness.metallicFactor);
       }
-      if (uRoughnessFactor >= 0) {
-        glUniform1f(
-            uRoughnessFactor, (float)pbrMetallicRoughness.roughnessFactor);
+      if (roughnessFactorLocation >= 0) {
+        glUniform1f(roughnessFactorLocation,
+            (float)pbrMetallicRoughness.roughnessFactor);
       }
-      if (uMetallicRoughnessTexture > 0) {
+      if (metallicRoughnessTextureLocation > 0) {
         auto textureObject = 0u;
         if (pbrMetallicRoughness.metallicRoughnessTexture.index >= 0) {
           const auto &texture =
@@ -303,51 +201,64 @@ int ViewerApplication::run()
             textureObject = textureObjects[texture.source];
           }
         }
-
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, textureObject);
-        glUniform1i(uMetallicRoughnessTexture, 1);
+        glUniform1i(metallicRoughnessTextureLocation, 1);
       }
 
-      if (uEmissiveTexture >= 0) {
-
+      if (emissiveTextureLocation >= 0) {
         auto textureObject = textureObjects[material.emissiveTexture.index];
         glActiveTexture(GL_TEXTURE2);
         glBindTexture(GL_TEXTURE_2D, textureObject);
-        glUniform1i(uEmissiveTexture, 2);
+        glUniform1i(emissiveTextureLocation, 2);
       }
-      if (uEmissiveFactor >= 0) {
+      if (emissiveFactorLocation >= 0) {
         auto emissiveFactor = material.emissiveFactor;
-        glUniform3f(uEmissiveFactor, (float)emissiveFactor[0],
+        glUniform3f(emissiveFactorLocation, (float)emissiveFactor[0],
             (float)emissiveFactor[1], (float)emissiveFactor[2]);
       }
+
+      if (normalTextureLocation >= 0) {
+        // NORMAL MAPPING //
+        auto textureObject = textureObjects[material.normalTexture.index];
+        glActiveTexture(GL_TEXTURE3);
+        glBindTexture(GL_TEXTURE_2D, textureObject);
+        glUniform1i(normalTextureLocation, 2);
+      }
+
     } else {
-      if (uBaseColorTexture >= 0) {
+      if (baseColorTextureLocation >= 0) {
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, whiteTexture);
-        glUniform1i(uBaseColorTexture, 0);
+        glUniform1i(baseColorTextureLocation, 0);
       }
-      if (uBaseColorFactor >= 0) {
-        glUniform4f(uBaseColorFactor, 1, 1, 1, 1);
+      if (baseColorFactorLocation >= 0) {
+        glUniform4f(baseColorFactorLocation, 1, 1, 1, 1);
       }
-      if (uMetallicFactor >= 0) {
-        glUniform1f(uMetallicFactor, 0.f);
+      if (metallicFactorLocation >= 0) {
+        glUniform1f(metallicFactorLocation, 0.f);
       }
-      if (uRoughnessFactor >= 0) {
-        glUniform1f(uRoughnessFactor, 0.f);
+      if (roughnessFactorLocation >= 0) {
+        glUniform1f(roughnessFactorLocation, 0.f);
       }
-      if (uMetallicRoughnessTexture >= 0) {
+      if (metallicRoughnessTextureLocation >= 0) {
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, whiteTexture);
-        glUniform1i(uMetallicRoughnessTexture, 0);
+        glUniform1i(metallicRoughnessTextureLocation, 0);
       }
-      if (uEmissiveTexture >= 0) {
+      if (emissiveTextureLocation >= 0) {
         glActiveTexture(GL_TEXTURE2);
         glBindTexture(GL_TEXTURE_2D, whiteTexture);
-        glUniform1i(uMetallicRoughnessTexture, 0);
+        glUniform1i(emissiveTextureLocation, 0);
       }
-      if (uMetallicFactor >= 0) {
-        glUniform3f(uMetallicRoughnessTexture, 0, 0, 0);
+      if (metallicFactorLocation >= 0) {
+        glUniform3f(metallicFactorLocation, 0, 0, 0);
+      }
+
+      if (normalTextureLocation >= 0) {
+        glActiveTexture(GL_TEXTURE3);
+        glBindTexture(GL_TEXTURE_2D, whiteTexture);
+        glUniform1i(normalTextureLocation, 2);
       }
     }
   };
@@ -359,23 +270,22 @@ int ViewerApplication::run()
 
     const auto viewMatrix = camera.getViewMatrix();
 
-    if (uLightDirection >= 0) {
+    if (lightDirectionLocation >= 0) {
       if (lightFromCamera)
-        glUniform3f(uLightDirection, 0, 0, 1);
+        glUniform3f(lightDirectionLocation, 0, 0, 1);
       else
-        glUniform3fv(uLightDirection, 1,
+        glUniform3fv(lightDirectionLocation, 1,
             glm::value_ptr(glm::normalize(
                 glm::vec3(viewMatrix * glm::vec4(lightDirection, 0.)))));
     }
-    if (uLightIntensity >= 0) {
-      glUniform3fv(uLightIntensity, 1, glm::value_ptr(lightIntensity));
+    if (lightIntensityLocation >= 0) {
+      glUniform3fv(lightIntensityLocation, 1, glm::value_ptr(lightIntensity));
     }
 
     // The recursive function that should draw a node
     // We use a std::function because a simple lambda cannot be recursive
     const std::function<void(int, const glm::mat4 &)> drawNode =
         [&](int nodeIdx, const glm::mat4 &parentMatrix) {
-          // TODO The drawNode function
           const tinygltf::Node &node = model.nodes[nodeIdx];
           const glm::mat4 modelMatrix =
               getLocalToWorldMatrix(node, parentMatrix);
@@ -388,10 +298,13 @@ int ViewerApplication::run()
             const glm::mat4 N = glm::transpose(glm::inverse(MV));
             // Send all to Shaders
             glUniformMatrix4fv(
-                modelViewMatrix, 1, GL_FALSE, glm::value_ptr(MV));
+                modelMatrixLocation, 1, GL_FALSE, glm::value_ptr(modelMatrix));
             glUniformMatrix4fv(
-                modelViewProjMatrix, 1, GL_FALSE, glm::value_ptr(MVP));
-            glUniformMatrix4fv(normalMatrix, 1, GL_FALSE, glm::value_ptr(N));
+                modelViewMatrixLocation, 1, GL_FALSE, glm::value_ptr(MV));
+            glUniformMatrix4fv(
+                modelViewProjMatrixLocation, 1, GL_FALSE, glm::value_ptr(MVP));
+            glUniformMatrix4fv(
+                normalMatrixLocation, 1, GL_FALSE, glm::value_ptr(N));
 
             /*********/
             // node.mesh = l'indice dans model.meshes
@@ -401,6 +314,7 @@ int ViewerApplication::run()
             // vaoRange.count
             for (size_t primitiveIndice = 0;
                  primitiveIndice < mesh.primitives.size(); ++primitiveIndice) {
+
               const auto vao =
                   vertexArrayObjects[vaoRange.begin + primitiveIndice];
               const auto &primitive = mesh.primitives[primitiveIndice];
@@ -612,18 +526,142 @@ bool ViewerApplication::loadGltfFile(tinygltf::Model &model)
 }
 
 std::vector<GLuint> ViewerApplication::createBufferObjects(
-    const tinygltf::Model &model)
+    const tinygltf::Model &model, size_t &vertexNumber)
 {
   // create a vector of GLuint with the correct size (model.buffers.size()) and
   // use glGenBuffers to create buffer objects.
   std::vector<GLuint> bufferObjects(model.buffers.size(), 0);
   glGenBuffers(GLsizei(model.buffers.size()), bufferObjects.data());
+  std::cout << "there is " << model.buffers.size()
+            << " buffers in this gltf model" << std::endl;
   for (size_t i = 0; i < model.buffers.size(); ++i) {
     glBindBuffer(GL_ARRAY_BUFFER, bufferObjects[i]);
     // glBufferStorage in 4.4, etant limité sur 4.3 je doit utiliser
     // glBufferData
-    glBufferData(GL_ARRAY_BUFFER, model.buffers[i].data.size(),
-        model.buffers[i].data.data(), GL_STATIC_DRAW);
+
+    ////////////////////////////////////////////////////////////////
+    ///         NORMAL MAPPING          ////////////////////////////
+    ////////////////////////////////////////////////////////////////
+    // on va ajouter les données : tangentes et bitangentes au buffer
+    // le buffer actuel est structuré comme tel : [ [data???] [POSITION]
+    // [NORMAL] [TEX_COORD_0] ]
+
+    // on veut ajouter [TANGENT] et [BITANGENT] qui doivent chacune faire la
+    // même taille que [POSITION] ou [NORMAL] puisqu'ils contiennent tous
+    // 3 uchar par vertex (contrairement à TEX_COORD_0 qui n'en contient que 2)
+
+    std::vector<unsigned char> augmentedBuffer = model.buffers[i].data;
+
+    // ICI j'ai essayé de réecrire le buffer mais avec des floats
+    // std::vector<float> buffer;
+
+    // std::vector<glm::vec3> pos;
+    /* = {
+          glm::vec3(0.5, 0.5, 0), glm::vec3(0.5, -0.5, 0), glm::vec3(-0.8,
+       0, 0)};*/
+    // std::vector<glm::vec3> normal;
+    /* = { glm::vec3(0, 0, 1), glm::vec3(0,
+    // 0,
+         1), glm::vec3(0, 0, 1)
+  };
+  * /
+      // std::vector<glm::vec2> texCoord0; /* = {
+      glm::vec2(0.5, 0.5),
+      glm::vec2(0.5, -0.5), glm::vec2(-0.8, 0)
+};
+* /
+
+    computePos(model, pos);
+computeNormal(model, normal);
+computeTexCoord(model, texCoord0);
+std::cout << "pos size : " << pos.size() << std::endl;
+std::cout << "normal size : " << normal.size() << std::endl;
+std::cout << "texCoord0 size : " << texCoord0.size() << std::endl;
+
+vertexNumber = pos.size();
+
+// Computing tangent and bitangent
+
+std::vector<glm::vec3> tangents;
+std::vector<glm::vec3> bitangents;
+
+computeTangentAndBitangentCoordinates(tangents, bitangents, pos, texCoord0);
+
+/*
+    for (int i = 0; i < pos.size(); ++i) {
+      buffer.push_back(pos[i].x);
+      buffer.push_back(pos[i].y);
+      buffer.push_back(pos[i].z);
+      buffer.push_back(normal[i].x);
+      buffer.push_back(normal[i].y);
+      buffer.push_back(normal[i].z);
+      buffer.push_back(texCoord0[i].x);
+      buffer.push_back(texCoord0[i].y);
+      buffer.push_back(tangents[i].x);
+      buffer.push_back(tangents[i].y);
+      buffer.push_back(tangents[i].z);
+      buffer.push_back(bitangents[i].x);
+      buffer.push_back(bitangents[i].y);
+      buffer.push_back(bitangents[i].z);
+    }*/
+    /*
+        for (auto p : pos) {
+          buffer.push_back(p.x);
+          buffer.push_back(p.y);
+          buffer.push_back(p.z);
+        }
+        for (auto n : normal) {
+          buffer.push_back(n.x);
+          buffer.push_back(n.y);
+          buffer.push_back(n.z);
+        }
+        for (auto tex : texCoord0) {
+          buffer.push_back(tex.x);
+          buffer.push_back(tex.y);
+        }
+        for (auto t : tangents) {
+          buffer.push_back(t.x);
+          buffer.push_back(t.y);
+          buffer.push_back(t.z);
+        }
+        for (auto b : bitangents) {
+          buffer.push_back(b.x);
+          buffer.push_back(b.y);
+          buffer.push_back(b.z);
+        }*/
+
+    // combien de uchar rajouter ? La différence de byteOffset entre
+    //[NORMAL]
+    // et [POSITION] qui ont les accessorIdx respectifs : 1 et 2
+
+    const auto &accessor1 = model.accessors[1];
+    const auto &bufferView1 = model.bufferViews[accessor1.bufferView];
+
+    const auto &accessor2 = model.accessors[2];
+    const auto &bufferView2 = model.bufferViews[accessor2.bufferView];
+
+    size_t sizeForTangent = bufferView2.byteOffset - bufferView1.byteOffset;
+
+    // filling buffer with bitangent data
+
+    for (int i = 0; i < sizeForTangent; ++i) {
+      augmentedBuffer.push_back(62);
+    }
+
+    // filling buffer with bitangent data
+    for (int i = 0; i < sizeForTangent; ++i) {
+      augmentedBuffer.push_back(0);
+    }
+
+    // On donne le nouveau buffer au GPU
+    glBufferData(GL_ARRAY_BUFFER, augmentedBuffer.size(),
+        augmentedBuffer.data(), GL_STATIC_DRAW);
+    // glBufferData(GL_ARRAY_BUFFER, buffer.size(), buffer.data(),
+    // GL_STATIC_DRAW);
+
+    ////////////////////////////////////////////////////////////////
+    ///         \NORMAL MAPPING          ///////////////////////////
+    ////////////////////////////////////////////////////////////////
   }
   glBindBuffer(GL_ARRAY_BUFFER, 0);
   return bufferObjects;
@@ -631,15 +669,18 @@ std::vector<GLuint> ViewerApplication::createBufferObjects(
 
 std::vector<GLuint> ViewerApplication::createVertexArrayObjects(
     const tinygltf::Model &model, const std::vector<GLuint> &bufferObjects,
-    std::vector<VaoRange> &meshIndexToVaoRange)
+    std::vector<VaoRange> &meshIndexToVaoRange, size_t vertexNumber)
 {
   std::vector<GLuint> vertexArrayObjects;
   const GLuint VERTEX_ATTRIB_POSITION_IDX = 0;
   const GLuint VERTEX_ATTRIB_NORMAL_IDX = 1;
   const GLuint VERTEX_ATTRIB_TEXCOORD0_IDX = 2;
+  const GLuint VERTEX_ATTRIB_TANGENT_IDX = 3;
+  const GLuint VERTEX_ATTRIB_BITANGENT_IDX = 4;
 
   // { Indice of Mesh , Number of primitives}  need this to Draw After
   meshIndexToVaoRange.resize(model.meshes.size());
+
   // const auto vaoOffset = vertexArrayObjects.size();
   // vertexArrayObjects.resize(vaoOffset +
   // model.meshes[meshIdx].primitives.size());
@@ -648,6 +689,7 @@ std::vector<GLuint> ViewerApplication::createVertexArrayObjects(
 
   GLsizei compteur = 0;
   for (const auto &mesh : model.meshes) {
+
     auto vaoOffset = GLsizei(vertexArrayObjects.size());
     meshIndexToVaoRange[compteur].begin = vaoOffset;
     auto numberOfPrimitives = GLsizei(mesh.primitives.size());
@@ -658,77 +700,125 @@ std::vector<GLuint> ViewerApplication::createVertexArrayObjects(
     vertexArrayObjects.resize(
         vertexArrayObjects.size() + mesh.primitives.size());
 
-    /* Here Start */
+    std::cout << "number of primitives :" << numberOfPrimitives << std::endl;
+
     // vaoOffset represente le debut du poiteur sur le tableau et
     // numberOfPrimitive la taille
     glGenVertexArrays(numberOfPrimitives, &vertexArrayObjects[vaoOffset]);
+
     for (size_t pimitiveIndice = 0; pimitiveIndice < size_t(numberOfPrimitives);
          ++pimitiveIndice) {
+
       const auto vao = vertexArrayObjects[vaoOffset + pimitiveIndice];
       const auto &primitive = mesh.primitives[pimitiveIndice];
       glBindVertexArray(vao);
-      { // I'm opening a scope because I want to reuse the variable iterator in
-        // the code for NORMAL and TEXCOORD_0
+
+      { // I'm opening a scope because I want to reuse the variable
+        // iterator
+        // in the code for NORMAL and TEXCOORD_0
         // const std::string parameters[] = {"POSITION", "NORMAL",
         // "TEXCOORD_0"};
         const GLuint parametersVertexAttribs[] = {VERTEX_ATTRIB_POSITION_IDX,
-            VERTEX_ATTRIB_NORMAL_IDX, VERTEX_ATTRIB_TEXCOORD0_IDX};
+            VERTEX_ATTRIB_NORMAL_IDX, VERTEX_ATTRIB_TEXCOORD0_IDX,
+            VERTEX_ATTRIB_TANGENT_IDX, VERTEX_ATTRIB_BITANGENT_IDX};
         std::map<int, std::string> mymap;
+        // ICI l'orghographe et la syntaxe MAJUSCULE des attribus est trés
+        // importants! ils doivent correspondre à celle du model glTF
         mymap[VERTEX_ATTRIB_POSITION_IDX] = "POSITION";
         mymap[VERTEX_ATTRIB_NORMAL_IDX] = "NORMAL";
         mymap[VERTEX_ATTRIB_TEXCOORD0_IDX] = "TEXCOORD_0";
+        mymap[VERTEX_ATTRIB_TANGENT_IDX] = "TANGENT";
+        mymap[VERTEX_ATTRIB_BITANGENT_IDX] = "BITANGENT";
 
+        glBindBuffer(GL_ARRAY_BUFFER, 1);
+
+        size_t globalByteOffset;
         for (const GLuint vertexAttrib : parametersVertexAttribs) {
           // std::cout <<  "Nous traitons l'attribut " <<
           // mymap.find(vertexAttrib)->second << std::endl;
+
+          // this part of the code (with the iterator) manages the vertex
+          // attributes present in the primitive attributes description
+          // (Position, Normal, Texcoorrd_0)
           const auto iterator =
               primitive.attributes.find(mymap.find(vertexAttrib)->second);
 
-          if (iterator != end(primitive.attributes)) { // If "POSITION" has been
-                                                       // found in the map yep
-            // (*iterator).first is the key "POSITION", (*iterator).second is
-            // the value, ie. the index of the accessor for this attribute
-            const auto accessorIdx = (*iterator).second;
-            const auto &accessor =
-                model.accessors[accessorIdx]; // TODO get the correct
-                                              // tinygltf::Accessor from
-                                              // model.accessors
-            const auto &bufferView =
-                model.bufferViews[accessor
-                                      .bufferView]; // TODO get the correct
-                                                    // tinygltf::BufferView from
-                                                    // model.bufferViews. You
-                                                    // need to use the accessor
-            const auto bufferIdx =
-                bufferView.buffer; // TODO get the index of the buffer used by
-                                   // the bufferView (you need to use it)
+          if (iterator != end(primitive.attributes)) {
 
-            const auto bufferObject =
-                bufferObjects[bufferIdx]; // TODO get the correct buffer object
-                                          // from the buffer index
-
-            // TODO Enable the vertex attrib array corresponding to POSITION
-            // with glEnableVertexAttribArray (you need to use
-            // VERTEX_ATTRIB_POSITION_IDX which has to be defined at the top of
-            // the cpp file) Correction de l'attribut
             glEnableVertexAttribArray(vertexAttrib);
-            assert(GL_ARRAY_BUFFER == bufferView.target);
-            // TODO Bind the buffer object to GL_ARRAY_BUFFER
-            glBindBuffer(GL_ARRAY_BUFFER, bufferObject);
 
-            const auto byteOffset =
-                accessor.byteOffset +
-                bufferView.byteOffset; // TODO Compute the total byte offset
-                                       // using the accessor and the buffer view
-            // TODO Call glVertexAttribPointer with the correct arguments.
-            glBindBuffer(GL_ARRAY_BUFFER, bufferObjects[bufferIdx]);
-            // Correction de l'attribut
+            const auto accessorIdx = (*iterator).second;
+
+            const auto &accessor = model.accessors[accessorIdx];
+            const auto &bufferView = model.bufferViews[accessor.bufferView];
+            const auto bufferIdx = bufferView.buffer;
+            const auto bufferObject = bufferObjects[bufferIdx];
+            // c'est un indice
+
+            assert(GL_ARRAY_BUFFER == bufferView.target);
+
+            // ICI on bind le buffer dans un loop sur les vertex
+            // attributes
+            // C'est redondant : dans les models glTF tout est stoqué dans
+            // un
+            // seul et même buffer! il est donc "bindé" 3 fois mais on
+            // pourrait le binder qu'une seule fois avant le loop ça
+            // marche
+            // glBindBuffer(GL_ARRAY_BUFFER, bufferObject);
+
+            const auto byteOffset = accessor.byteOffset + bufferView.byteOffset;
+
+            std::cout << GLsizei(bufferView.byteStride) << std::endl
+                      << byteOffset << std::endl
+                      << std::endl;
             glVertexAttribPointer(vertexAttrib, accessor.type,
                 accessor.componentType, GL_FALSE,
                 GLsizei(bufferView.byteStride), (const GLvoid *)byteOffset);
+
+            globalByteOffset = byteOffset;
           }
         }
+        ////////////////////////////////////////////////////////////////
+        ///         NORMAL MAPPING          ////////////////////////////
+        ////////////////////////////////////////////////////////////////
 
+        // this part : i manage the vertex attributes which are not
+        // present in
+        // the primitive attributes description : Tangent & Bitangent
+
+        // whats the size of tangent & bitangent data ?
+
+        const auto &accessor1 = model.accessors[1];
+        const auto &bufferView1 = model.bufferViews[accessor1.bufferView];
+
+        const auto &accessor2 = model.accessors[2];
+        const auto &bufferView2 = model.bufferViews[accessor2.bufferView];
+
+        size_t sizeForTangent = bufferView2.byteOffset - bufferView1.byteOffset;
+
+        size_t sizeForTexCoord = sizeForTangent * 2 / 3;
+
+        // we need to increment the offset by the number of data
+        // stored for  TexCoord_0
+        globalByteOffset += sizeForTexCoord;
+
+        std::cout << "Telling vao how to manage tangent data" << std::endl;
+        glEnableVertexAttribArray(VERTEX_ATTRIB_TANGENT_IDX);
+        glVertexAttribPointer(VERTEX_ATTRIB_TANGENT_IDX, 3, GL_FLOAT, GL_FALSE,
+            0, (const GLvoid *)globalByteOffset);
+
+        globalByteOffset += sizeForTangent;
+
+        std::cout << "Telling vao how to manage bitangent data" << std::endl;
+        glEnableVertexAttribArray(VERTEX_ATTRIB_BITANGENT_IDX);
+        glVertexAttribPointer(VERTEX_ATTRIB_BITANGENT_IDX, 3, GL_FLOAT,
+            GL_FALSE, 0, (const GLvoid *)globalByteOffset);
+
+        ////////////////////////////////////////////////////////////////
+        ///         \NORMAL MAPPING          ///////////////////////////
+        ////////////////////////////////////////////////////////////////
+
+        // ??
         // Ajout aprés oublie
         if (primitive.indices >= 0) {
           const auto accessorIdx = primitive.indices;
@@ -740,11 +830,55 @@ std::vector<GLuint> ViewerApplication::createVertexArrayObjects(
           const auto bufferObject = bufferObjects[bufferIdx];
           glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, bufferObject);
         }
+
+        // on débind le buffer (vbo)
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
       }
+
+      /*
+            glBindBuffer(GL_ARRAY_BUFFER, 1);
+
+            // size_t byteOffset = 0;
+
+            int vertexStride = (3 + 3 + 2 + 3 + 3) * sizeof(float);
+            GLintptr vertex_position_offset = 0 * sizeof(float);
+            GLintptr vertex_normal_offset = 3 * sizeof(float);
+            GLintptr vertex_texcoord_offset = 6 * sizeof(float);
+            GLintptr vertex_tangent_offset = 8 * sizeof(float);
+            GLintptr vertex_bitangent_offset = 11 * sizeof(float);
+
+            glEnableVertexAttribArray(VERTEX_ATTRIB_POSITION_IDX);
+            glVertexAttribPointer(VERTEX_ATTRIB_POSITION_IDX, 3, GL_FLOAT,
+         GL_FALSE, vertexStride, (const GLvoid *)vertex_position_offset);
+            // byteOffset += vertexNumber * 3 * sizeof(float);
+
+            glEnableVertexAttribArray(VERTEX_ATTRIB_NORMAL_IDX);
+            glVertexAttribPointer(VERTEX_ATTRIB_POSITION_IDX, 3, GL_FLOAT,
+         GL_FALSE, vertexStride, (const GLvoid *)vertex_normal_offset);
+            // byteOffset += vertexNumber * 3 * sizeof(float);
+
+            glEnableVertexAttribArray(VERTEX_ATTRIB_NORMAL_IDX);
+            glVertexAttribPointer(VERTEX_ATTRIB_TEXCOORD0_IDX, 2, GL_FLOAT,
+         GL_FALSE, vertexStride, (const GLvoid *)vertex_texcoord_offset);
+            // byteOffset += vertexNumber * 2 * sizeof(float);
+
+            glEnableVertexAttribArray(VERTEX_ATTRIB_TANGENT_IDX);
+            glVertexAttribPointer(VERTEX_ATTRIB_TANGENT_IDX, 3, GL_FLOAT,
+         GL_FALSE, vertexStride, (const GLvoid *)vertex_tangent_offset);
+            // byteOffset += vertexNumber * 3 * sizeof(float);
+
+            glEnableVertexAttribArray(VERTEX_ATTRIB_BITANGENT_IDX);
+            glVertexAttribPointer(VERTEX_ATTRIB_BITANGENT_IDX, 3, GL_FLOAT,
+         GL_FALSE, vertexStride, (const GLvoid *)vertex_bitangent_offset);
+
+            glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+            */
     }
-    /* Here Finish*/
-    compteur++;
   }
+  compteur++;
+
+  // on debind le vao
   glBindVertexArray(0);
   return vertexArrayObjects;
 }
@@ -754,8 +888,8 @@ std::vector<GLuint> ViewerApplication::createTextureObjects(
 {
   std::vector<GLuint> textureObjects(model.textures.size(), 0);
 
-  /** Definition Default Simpler dans le cas ou ils ne sont pas definit dans le
-   * model **/
+  /** Definition Default Simpler dans le cas ou ils ne sont pas definit dans
+   * le model **/
   tinygltf::Sampler defaultSampler;
   defaultSampler.minFilter = GL_LINEAR;
   defaultSampler.magFilter = GL_LINEAR;
@@ -792,4 +926,387 @@ std::vector<GLuint> ViewerApplication::createTextureObjects(
   }
   glBindTexture(GL_TEXTURE_2D, 0);
   return textureObjects;
+}
+
+void ViewerApplication::computeTangentAndBitangentCoordinates(
+    std::vector<glm::vec3> &tangents, std::vector<glm::vec3> &bitangents,
+    std::vector<glm::vec3> &pos, std::vector<glm::vec2> &texCoord0)
+{
+  glm::vec3 tangent;
+  glm::vec3 bitangent;
+  for (int i = 0; i < pos.size(); i += 3) {
+    // Shortcuts for vertices
+    glm::vec3 &v0 = pos[i + 0];
+    glm::vec3 &v1 = pos[i + 1];
+    glm::vec3 &v2 = pos[i + 2];
+
+    // Shortcuts for UVs
+    glm::vec2 &uv0 = texCoord0[i + 0];
+    glm::vec2 &uv1 = texCoord0[i + 1];
+    glm::vec2 &uv2 = texCoord0[i + 2];
+
+    // Edges of the triangle : position delta
+    glm::vec3 deltaPos1 = v1 - v0;
+    glm::vec3 deltaPos2 = v2 - v0;
+
+    // UV delta
+    glm::vec2 deltaUV1 = uv1 - uv0;
+    glm::vec2 deltaUV2 = uv2 - uv0;
+
+    float r = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV1.y * deltaUV2.x);
+    tangent = (deltaPos1 * deltaUV2.y - deltaPos2 * deltaUV1.y) * r;
+    bitangent = (deltaPos2 * deltaUV1.x - deltaPos1 * deltaUV2.x) * r;
+
+    // Set the same tangent for all three vertices of the triangle.
+    // They will be merged later, in vboindexer.cpp
+    tangents.push_back(tangent);
+    tangents.push_back(tangent);
+    tangents.push_back(tangent);
+
+    // Same thing for bitangents
+    bitangents.push_back(bitangent);
+    bitangents.push_back(bitangent);
+    bitangents.push_back(bitangent);
+  }
+}
+
+void ViewerApplication::computePos(
+    const tinygltf::Model &model, std::vector<glm::vec3> &pos)
+{
+  if (model.defaultScene >= 0) {
+    const std::function<void(int, const glm::mat4 &)> addPos =
+        [&](int nodeIdx, const glm::mat4 &parentMatrix) {
+          const auto &node = model.nodes[nodeIdx];
+          const glm::mat4 modelMatrix =
+              getLocalToWorldMatrix(node, parentMatrix);
+          if (node.mesh >= 0) {
+            const auto &mesh = model.meshes[node.mesh];
+            for (size_t pIdx = 0; pIdx < mesh.primitives.size(); ++pIdx) {
+
+              const auto &primitive = mesh.primitives[pIdx];
+              const auto positionAttrIdxIt =
+                  primitive.attributes.find("POSITION");
+              if (positionAttrIdxIt == end(primitive.attributes)) {
+                continue;
+              }
+              const auto &positionAccessor =
+                  model.accessors[(*positionAttrIdxIt).second];
+              if (positionAccessor.type != 3) {
+                std::cerr << "Position accessor with type != VEC3, skipping"
+                          << std::endl;
+                continue;
+              }
+              const auto &positionBufferView =
+                  model.bufferViews[positionAccessor.bufferView];
+              const auto byteOffset =
+                  positionAccessor.byteOffset + positionBufferView.byteOffset;
+              const auto &positionBuffer =
+                  model.buffers[positionBufferView.buffer];
+              const auto positionByteStride =
+                  positionBufferView.byteStride ? positionBufferView.byteStride
+                                                : 3 * sizeof(float);
+
+              if (primitive.indices >= 0) {
+                const auto &indexAccessor = model.accessors[primitive.indices];
+                const auto &indexBufferView =
+                    model.bufferViews[indexAccessor.bufferView];
+                const auto indexByteOffset =
+                    indexAccessor.byteOffset + indexBufferView.byteOffset;
+                const auto &indexBuffer = model.buffers[indexBufferView.buffer];
+                auto indexByteStride = indexBufferView.byteStride;
+
+                switch (indexAccessor.componentType) {
+                default:
+                  std::cerr
+                      << "Primitive index accessor with bad componentType "
+                      << indexAccessor.componentType << ", skipping it."
+                      << std::endl;
+                  continue;
+                case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
+                  indexByteStride =
+                      indexByteStride ? indexByteStride : sizeof(uint8_t);
+                  break;
+                case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
+                  indexByteStride =
+                      indexByteStride ? indexByteStride : sizeof(uint16_t);
+                  break;
+                case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
+                  indexByteStride =
+                      indexByteStride ? indexByteStride : sizeof(uint32_t);
+                  break;
+                }
+
+                for (size_t i = 0; i < indexAccessor.count; ++i) {
+                  uint32_t index = 0;
+                  switch (indexAccessor.componentType) {
+                  case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
+                    index = *((const uint8_t *)&indexBuffer
+                                  .data[indexByteOffset + indexByteStride * i]);
+                    break;
+                  case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
+                    index = *((const uint16_t *)&indexBuffer
+                                  .data[indexByteOffset + indexByteStride * i]);
+                    break;
+                  case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
+                    index = *((const uint32_t *)&indexBuffer
+                                  .data[indexByteOffset + indexByteStride * i]);
+                    break;
+                  }
+                  const auto &localPosition =
+                      *((const glm::vec3 *)&positionBuffer
+                              .data[byteOffset + positionByteStride * index]);
+                  const auto worldPosition =
+                      glm::vec3(modelMatrix * glm::vec4(localPosition, 1.f));
+
+                  pos.push_back(worldPosition);
+                }
+              } else {
+                for (size_t i = 0; i < positionAccessor.count; ++i) {
+                  const auto &localPosition =
+                      *((const glm::vec3 *)&positionBuffer
+                              .data[byteOffset + positionByteStride * i]);
+                  const auto worldPosition =
+                      glm::vec3(modelMatrix * glm::vec4(localPosition, 1.f));
+
+                  pos.push_back(worldPosition);
+                }
+              }
+            }
+          }
+          for (const auto childNodeIdx : node.children) {
+            addPos(childNodeIdx, modelMatrix);
+          }
+        };
+    for (const auto nodeIdx : model.scenes[model.defaultScene].nodes) {
+      addPos(nodeIdx, glm::mat4(1));
+    }
+  }
+}
+
+void ViewerApplication::computeNormal(
+    const tinygltf::Model &model, std::vector<glm::vec3> &normal)
+{
+  if (model.defaultScene >= 0) {
+    const std::function<void(int, const glm::mat4 &)> addNormal =
+        [&](int nodeIdx, const glm::mat4 &parentMatrix) {
+          const auto &node = model.nodes[nodeIdx];
+          const glm::mat4 modelMatrix =
+              getLocalToWorldMatrix(node, parentMatrix);
+          if (node.mesh >= 0) {
+            const auto &mesh = model.meshes[node.mesh];
+            for (size_t pIdx = 0; pIdx < mesh.primitives.size(); ++pIdx) {
+
+              const auto &primitive = mesh.primitives[pIdx];
+              const auto normalAttrIdxIt = primitive.attributes.find("NORMAL");
+              if (normalAttrIdxIt == end(primitive.attributes)) {
+                continue;
+              }
+              const auto &normalAccessor =
+                  model.accessors[(*normalAttrIdxIt).second];
+              if (normalAccessor.type != 3) {
+                std::cerr << "normal accessor with type != VEC3, skipping"
+                          << std::endl;
+                continue;
+              }
+              const auto &normalBufferView =
+                  model.bufferViews[normalAccessor.bufferView];
+              const auto byteOffset =
+                  normalAccessor.byteOffset + normalBufferView.byteOffset;
+              const auto &normalBuffer = model.buffers[normalBufferView.buffer];
+              const auto normalByteStride = normalBufferView.byteStride
+                                                ? normalBufferView.byteStride
+                                                : 3 * sizeof(float);
+
+              if (primitive.indices >= 0) {
+                const auto &indexAccessor = model.accessors[primitive.indices];
+                const auto &indexBufferView =
+                    model.bufferViews[indexAccessor.bufferView];
+                const auto indexByteOffset =
+                    indexAccessor.byteOffset + indexBufferView.byteOffset;
+                const auto &indexBuffer = model.buffers[indexBufferView.buffer];
+                auto indexByteStride = indexBufferView.byteStride;
+
+                switch (indexAccessor.componentType) {
+                default:
+                  std::cerr
+                      << "Primitive index accessor with bad componentType "
+                      << indexAccessor.componentType << ", skipping it."
+                      << std::endl;
+                  continue;
+                case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
+                  indexByteStride =
+                      indexByteStride ? indexByteStride : sizeof(uint8_t);
+                  break;
+                case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
+                  indexByteStride =
+                      indexByteStride ? indexByteStride : sizeof(uint16_t);
+                  break;
+                case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
+                  indexByteStride =
+                      indexByteStride ? indexByteStride : sizeof(uint32_t);
+                  break;
+                }
+
+                for (size_t i = 0; i < indexAccessor.count; ++i) {
+                  uint32_t index = 0;
+                  switch (indexAccessor.componentType) {
+                  case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
+                    index = *((const uint8_t *)&indexBuffer
+                                  .data[indexByteOffset + indexByteStride * i]);
+                    break;
+                  case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
+                    index = *((const uint16_t *)&indexBuffer
+                                  .data[indexByteOffset + indexByteStride * i]);
+                    break;
+                  case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
+                    index = *((const uint32_t *)&indexBuffer
+                                  .data[indexByteOffset + indexByteStride * i]);
+                    break;
+                  }
+                  const auto &localNormal =
+                      *((const glm::vec3 *)&normalBuffer
+                              .data[byteOffset + normalByteStride * index]);
+                  const auto worldNormal =
+                      glm::vec3(modelMatrix * glm::vec4(localNormal, 1.f));
+
+                  normal.push_back(worldNormal);
+                }
+              } else {
+                for (size_t i = 0; i < normalAccessor.count; ++i) {
+                  const auto &localNormal =
+                      *((const glm::vec3 *)&normalBuffer
+                              .data[byteOffset + normalByteStride * i]);
+                  const auto worldNormal =
+                      glm::vec3(modelMatrix * glm::vec4(localNormal, 1.f));
+
+                  normal.push_back(worldNormal);
+                }
+              }
+            }
+          }
+          for (const auto childNodeIdx : node.children) {
+            addNormal(childNodeIdx, modelMatrix);
+          }
+        };
+    for (const auto nodeIdx : model.scenes[model.defaultScene].nodes) {
+      addNormal(nodeIdx, glm::mat4(1));
+    }
+  }
+}
+
+void ViewerApplication::computeTexCoord(
+    const tinygltf::Model &model, std::vector<glm::vec2> &texCoord0)
+{
+  if (model.defaultScene >= 0) {
+    const std::function<void(int, const glm::mat4 &)> addTexCoord =
+        [&](int nodeIdx, const glm::mat4 &parentMatrix) {
+          const auto &node = model.nodes[nodeIdx];
+          const glm::mat4 modelMatrix =
+              getLocalToWorldMatrix(node, parentMatrix);
+          if (node.mesh >= 0) {
+            const auto &mesh = model.meshes[node.mesh];
+            for (size_t pIdx = 0; pIdx < mesh.primitives.size(); ++pIdx) {
+
+              const auto &primitive = mesh.primitives[pIdx];
+              const auto texCoordAttrIdxIt =
+                  primitive.attributes.find("TEXCOORD_0");
+              if (texCoordAttrIdxIt == end(primitive.attributes)) {
+                continue;
+              }
+              const auto &texCoordAccessor =
+                  model.accessors[(*texCoordAttrIdxIt).second];
+              if (texCoordAccessor.type != 2) {
+                std::cerr << "texCoord accessor with type != VEC2, skipping"
+                          << std::endl;
+                continue;
+              }
+              const auto &texCoordBufferView =
+                  model.bufferViews[texCoordAccessor.bufferView];
+              const auto byteOffset =
+                  texCoordAccessor.byteOffset + texCoordBufferView.byteOffset;
+              const auto &texCoordBuffer =
+                  model.buffers[texCoordBufferView.buffer];
+              const auto texCoordByteStride =
+                  texCoordBufferView.byteStride ? texCoordBufferView.byteStride
+                                                : 2 * sizeof(float);
+
+              if (primitive.indices >= 0) {
+                const auto &indexAccessor = model.accessors[primitive.indices];
+                const auto &indexBufferView =
+                    model.bufferViews[indexAccessor.bufferView];
+                const auto indexByteOffset =
+                    indexAccessor.byteOffset + indexBufferView.byteOffset;
+                const auto &indexBuffer = model.buffers[indexBufferView.buffer];
+                auto indexByteStride = indexBufferView.byteStride;
+
+                switch (indexAccessor.componentType) {
+                default:
+                  std::cerr
+                      << "Primitive index accessor with bad componentType "
+                      << indexAccessor.componentType << ", skipping it."
+                      << std::endl;
+                  continue;
+                case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
+                  indexByteStride =
+                      indexByteStride ? indexByteStride : sizeof(uint8_t);
+                  break;
+                case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
+                  indexByteStride =
+                      indexByteStride ? indexByteStride : sizeof(uint16_t);
+                  break;
+                case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
+                  indexByteStride =
+                      indexByteStride ? indexByteStride : sizeof(uint32_t);
+                  break;
+                }
+
+                for (size_t i = 0; i < indexAccessor.count; ++i) {
+                  uint32_t index = 0;
+                  switch (indexAccessor.componentType) {
+                  case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
+                    index = *((const uint8_t *)&indexBuffer
+                                  .data[indexByteOffset + indexByteStride * i]);
+                    break;
+                  case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
+                    index = *((const uint16_t *)&indexBuffer
+                                  .data[indexByteOffset + indexByteStride * i]);
+                    break;
+                  case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
+                    index = *((const uint32_t *)&indexBuffer
+                                  .data[indexByteOffset + indexByteStride * i]);
+                    break;
+                  }
+
+                  // ICI VEC2 PAS VEC3; FAUT IL FAIRE WORLD OU LOCAL COORD ?
+                  const auto &localTexCoord =
+                      *((const glm::vec2 *)&texCoordBuffer
+                              .data[byteOffset + texCoordByteStride * index]);
+                  /*const auto worldTexCoord =
+                      glm::vec2(modelMatrix * glm::vec4(localTexCoord,
+                     0, 1.f));
+                  */
+                  texCoord0.push_back(localTexCoord);
+                }
+              } else {
+                for (size_t i = 0; i < texCoordAccessor.count; ++i) {
+                  const auto &localTexCoord =
+                      *((const glm::vec2 *)&texCoordBuffer
+                              .data[byteOffset + texCoordByteStride * i]);
+                  /*const auto worldTexCoord =
+                      glm::vec2(modelMatrix *
+                     glm::vec4(localTexCoord, 1.f));
+                  */
+                  texCoord0.push_back(localTexCoord);
+                }
+              }
+            }
+          }
+          for (const auto childNodeIdx : node.children) {
+            addTexCoord(childNodeIdx, modelMatrix);
+          }
+        };
+    for (const auto nodeIdx : model.scenes[model.defaultScene].nodes) {
+      addTexCoord(nodeIdx, glm::mat4(1));
+    }
+  }
 }

@@ -1,10 +1,10 @@
 #pragma once
 
+#include "tiny_gltf.h"
 #include "utils/GLFWHandle.hpp"
 #include "utils/cameraControllerInterface.hpp"
 #include "utils/filesystem.hpp"
 #include "utils/shaders.hpp"
-#include "tiny_gltf.h"
 
 class ViewerApplication
 {
@@ -57,8 +57,21 @@ private:
     the creation of a GLFW windows and thus a GL context which must exists
     before most of OpenGL function calls.
   */
-  bool loadGltfFile(tinygltf::Model & model);
-  std::vector<GLuint> createBufferObjects( const tinygltf::Model &model);
-  std::vector<GLuint> createVertexArrayObjects( const tinygltf::Model &model, const std::vector<GLuint> &bufferObjects, std::vector<VaoRange> & meshIndexToVaoRange);
+  bool loadGltfFile(tinygltf::Model &model);
+  std::vector<GLuint> createBufferObjects(
+      const tinygltf::Model &model, size_t &vertexNumber);
+  std::vector<GLuint> createVertexArrayObjects(const tinygltf::Model &model,
+      const std::vector<GLuint> &bufferObjects,
+      std::vector<VaoRange> &meshIndexToVaoRange, size_t vertexNumber);
   std::vector<GLuint> createTextureObjects(const tinygltf::Model &model) const;
+
+  void computeTangentAndBitangentCoordinates(std::vector<glm::vec3> &tangents,
+      std::vector<glm::vec3> &bitangents, std::vector<glm::vec3> &pos,
+      std::vector<glm::vec2> &texCoord0);
+
+  void computePos(const tinygltf::Model &model, std::vector<glm::vec3> &pos);
+  void computeNormal(
+      const tinygltf::Model &model, std::vector<glm::vec3> &normal);
+  void computeTexCoord(
+      const tinygltf::Model &model, std::vector<glm::vec2> &texCoord0);
 };
