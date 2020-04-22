@@ -1,3 +1,4 @@
+/** Branch Many Lights Test **/
 #include "ViewerApplication.hpp"
 
 #include <iostream>
