@@ -143,6 +143,7 @@ int ViewerApplication::run()
   const auto bufferObjects = createBufferObjects(model, vertexNumber);
 
   std::cout << "vertex number : " << vertexNumber << std::endl;
+
   // Creation of Vertex Array Objects
   std::vector<VaoRange> meshToVertexArrays;
   const auto vertexArrayObjects = createVertexArrayObjects(
@@ -531,11 +532,20 @@ std::vector<GLuint> ViewerApplication::createBufferObjects(
   // create a vector of GLuint with the correct size (model.buffers.size()) and
   // use glGenBuffers to create buffer objects.
   std::vector<GLuint> bufferObjects(model.buffers.size(), 0);
-  glGenBuffers(GLsizei(model.buffers.size()), bufferObjects.data());
+  glGenBuffers(GLsizei(2 * model.buffers.size()), bufferObjects.data());
   std::cout << "there is " << model.buffers.size()
             << " buffers in this gltf model" << std::endl;
   for (size_t i = 0; i < model.buffers.size(); ++i) {
     glBindBuffer(GL_ARRAY_BUFFER, bufferObjects[i]);
+
+    glBufferData(GL_ARRAY_BUFFER, model.buffers[i].data.size(),
+        model.buffers[i].data.data(), GL_STATIC_DRAW);
+
+    std::cout << "creating vbo " << bufferObjects[i] << std::endl;
+
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+    // GL_STATIC_DRAW);
     // glBufferStorage in 4.4, etant limité sur 4.3 je doit utiliser
     // glBufferData
 
@@ -550,120 +560,51 @@ std::vector<GLuint> ViewerApplication::createBufferObjects(
     // même taille que [POSITION] ou [NORMAL] puisqu'ils contiennent tous
     // 3 uchar par vertex (contrairement à TEX_COORD_0 qui n'en contient que 2)
 
-    std::vector<unsigned char> augmentedBuffer = model.buffers[i].data;
-
     // ICI j'ai essayé de réecrire le buffer mais avec des floats
-    // std::vector<float> buffer;
+    std::vector<float> buffer;
 
-    // std::vector<glm::vec3> pos;
-    /* = {
-          glm::vec3(0.5, 0.5, 0), glm::vec3(0.5, -0.5, 0), glm::vec3(-0.8,
-       0, 0)};*/
-    // std::vector<glm::vec3> normal;
-    /* = { glm::vec3(0, 0, 1), glm::vec3(0,
-    // 0,
-         1), glm::vec3(0, 0, 1)
-  };
-  * /
-      // std::vector<glm::vec2> texCoord0; /* = {
-      glm::vec2(0.5, 0.5),
-      glm::vec2(0.5, -0.5), glm::vec2(-0.8, 0)
-};
-* /
+    std::vector<glm::vec3> pos;
+    std::vector<glm::vec2> texCoord0;
 
     computePos(model, pos);
-computeNormal(model, normal);
-computeTexCoord(model, texCoord0);
-std::cout << "pos size : " << pos.size() << std::endl;
-std::cout << "normal size : " << normal.size() << std::endl;
-std::cout << "texCoord0 size : " << texCoord0.size() << std::endl;
+    computeTexCoord(model, texCoord0);
 
-vertexNumber = pos.size();
+    vertexNumber = pos.size();
 
-// Computing tangent and bitangent
+    // Computing tangent and bitangent
+    std::vector<glm::vec3> tangents;
+    std::vector<glm::vec3> bitangents;
 
-std::vector<glm::vec3> tangents;
-std::vector<glm::vec3> bitangents;
+    computeTangentAndBitangentCoordinates(tangents, bitangents, pos, texCoord0);
 
-computeTangentAndBitangentCoordinates(tangents, bitangents, pos, texCoord0);
-
-/*
     for (int i = 0; i < pos.size(); ++i) {
-      buffer.push_back(pos[i].x);
-      buffer.push_back(pos[i].y);
-      buffer.push_back(pos[i].z);
-      buffer.push_back(normal[i].x);
-      buffer.push_back(normal[i].y);
-      buffer.push_back(normal[i].z);
-      buffer.push_back(texCoord0[i].x);
-      buffer.push_back(texCoord0[i].y);
       buffer.push_back(tangents[i].x);
       buffer.push_back(tangents[i].y);
       buffer.push_back(tangents[i].z);
       buffer.push_back(bitangents[i].x);
       buffer.push_back(bitangents[i].y);
       buffer.push_back(bitangents[i].z);
-    }*/
-    /*
-        for (auto p : pos) {
-          buffer.push_back(p.x);
-          buffer.push_back(p.y);
-          buffer.push_back(p.z);
-        }
-        for (auto n : normal) {
-          buffer.push_back(n.x);
-          buffer.push_back(n.y);
-          buffer.push_back(n.z);
-        }
-        for (auto tex : texCoord0) {
-          buffer.push_back(tex.x);
-          buffer.push_back(tex.y);
-        }
-        for (auto t : tangents) {
-          buffer.push_back(t.x);
-          buffer.push_back(t.y);
-          buffer.push_back(t.z);
-        }
-        for (auto b : bitangents) {
-          buffer.push_back(b.x);
-          buffer.push_back(b.y);
-          buffer.push_back(b.z);
-        }*/
-
-    // combien de uchar rajouter ? La différence de byteOffset entre
-    //[NORMAL]
-    // et [POSITION] qui ont les accessorIdx respectifs : 1 et 2
-
-    const auto &accessor1 = model.accessors[1];
-    const auto &bufferView1 = model.bufferViews[accessor1.bufferView];
-
-    const auto &accessor2 = model.accessors[2];
-    const auto &bufferView2 = model.bufferViews[accessor2.bufferView];
-
-    size_t sizeForTangent = bufferView2.byteOffset - bufferView1.byteOffset;
-
-    // filling buffer with bitangent data
-
-    for (int i = 0; i < sizeForTangent; ++i) {
-      augmentedBuffer.push_back(62);
     }
 
-    // filling buffer with bitangent data
-    for (int i = 0; i < sizeForTangent; ++i) {
-      augmentedBuffer.push_back(0);
-    }
+    // je bind un 2e vbo indexé après tous les autres vbo potentiels
+    // Ainsi on aura d'abord les vbo contenant des pos, normal et texcoord, puis
+    // les vbo contenant tangents et bitangents
+    glBindBuffer(GL_ARRAY_BUFFER, bufferObjects[i] + model.buffers.size());
+
+    std::cout << "creating vbo " << bufferObjects[i] + model.buffers.size()
+              << std::endl;
 
     // On donne le nouveau buffer au GPU
-    glBufferData(GL_ARRAY_BUFFER, augmentedBuffer.size(),
-        augmentedBuffer.data(), GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, buffer.size(), buffer.data(), GL_STATIC_DRAW);
+
     // glBufferData(GL_ARRAY_BUFFER, buffer.size(), buffer.data(),
     // GL_STATIC_DRAW);
 
     ////////////////////////////////////////////////////////////////
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
     ///         \NORMAL MAPPING          ///////////////////////////
     ////////////////////////////////////////////////////////////////
   }
-  glBindBuffer(GL_ARRAY_BUFFER, 0);
   return bufferObjects;
 }
 
@@ -711,7 +652,10 @@ std::vector<GLuint> ViewerApplication::createVertexArrayObjects(
 
       const auto vao = vertexArrayObjects[vaoOffset + pimitiveIndice];
       const auto &primitive = mesh.primitives[pimitiveIndice];
+
       glBindVertexArray(vao);
+
+      GLuint tangentBufferObject;
 
       { // I'm opening a scope because I want to reuse the variable
         // iterator
@@ -719,16 +663,13 @@ std::vector<GLuint> ViewerApplication::createVertexArrayObjects(
         // const std::string parameters[] = {"POSITION", "NORMAL",
         // "TEXCOORD_0"};
         const GLuint parametersVertexAttribs[] = {VERTEX_ATTRIB_POSITION_IDX,
-            VERTEX_ATTRIB_NORMAL_IDX, VERTEX_ATTRIB_TEXCOORD0_IDX,
-            VERTEX_ATTRIB_TANGENT_IDX, VERTEX_ATTRIB_BITANGENT_IDX};
+            VERTEX_ATTRIB_NORMAL_IDX, VERTEX_ATTRIB_TEXCOORD0_IDX};
         std::map<int, std::string> mymap;
         // ICI l'orghographe et la syntaxe MAJUSCULE des attribus est trés
         // importants! ils doivent correspondre à celle du model glTF
         mymap[VERTEX_ATTRIB_POSITION_IDX] = "POSITION";
         mymap[VERTEX_ATTRIB_NORMAL_IDX] = "NORMAL";
         mymap[VERTEX_ATTRIB_TEXCOORD0_IDX] = "TEXCOORD_0";
-        mymap[VERTEX_ATTRIB_TANGENT_IDX] = "TANGENT";
-        mymap[VERTEX_ATTRIB_BITANGENT_IDX] = "BITANGENT";
 
         glBindBuffer(GL_ARRAY_BUFFER, 1);
 
@@ -753,24 +694,15 @@ std::vector<GLuint> ViewerApplication::createVertexArrayObjects(
             const auto &bufferView = model.bufferViews[accessor.bufferView];
             const auto bufferIdx = bufferView.buffer;
             const auto bufferObject = bufferObjects[bufferIdx];
-            // c'est un indice
+
+            tangentBufferObject = bufferObject + model.buffers.size();
 
             assert(GL_ARRAY_BUFFER == bufferView.target);
 
-            // ICI on bind le buffer dans un loop sur les vertex
-            // attributes
-            // C'est redondant : dans les models glTF tout est stoqué dans
-            // un
-            // seul et même buffer! il est donc "bindé" 3 fois mais on
-            // pourrait le binder qu'une seule fois avant le loop ça
-            // marche
-            // glBindBuffer(GL_ARRAY_BUFFER, bufferObject);
+            glBindBuffer(GL_ARRAY_BUFFER, bufferObject);
 
             const auto byteOffset = accessor.byteOffset + bufferView.byteOffset;
 
-            std::cout << GLsizei(bufferView.byteStride) << std::endl
-                      << byteOffset << std::endl
-                      << std::endl;
             glVertexAttribPointer(vertexAttrib, accessor.type,
                 accessor.componentType, GL_FALSE,
                 GLsizei(bufferView.byteStride), (const GLvoid *)byteOffset);
@@ -778,42 +710,31 @@ std::vector<GLuint> ViewerApplication::createVertexArrayObjects(
             globalByteOffset = byteOffset;
           }
         }
+
         ////////////////////////////////////////////////////////////////
         ///         NORMAL MAPPING          ////////////////////////////
         ////////////////////////////////////////////////////////////////
 
-        // this part : i manage the vertex attributes which are not
+        // this part : I manage the vertex attributes which are not
         // present in
         // the primitive attributes description : Tangent & Bitangent
 
-        // whats the size of tangent & bitangent data ?
-
-        const auto &accessor1 = model.accessors[1];
-        const auto &bufferView1 = model.bufferViews[accessor1.bufferView];
-
-        const auto &accessor2 = model.accessors[2];
-        const auto &bufferView2 = model.bufferViews[accessor2.bufferView];
-
-        size_t sizeForTangent = bufferView2.byteOffset - bufferView1.byteOffset;
-
-        size_t sizeForTexCoord = sizeForTangent * 2 / 3;
-
-        // we need to increment the offset by the number of data
-        // stored for  TexCoord_0
-        globalByteOffset += sizeForTexCoord;
+        assert(tangentBufferObject);
+        glBindBuffer(GL_ARRAY_BUFFER, tangentBufferObject);
+        std::cout << "binding vbo " << tangentBufferObject << std::endl;
 
         std::cout << "Telling vao how to manage tangent data" << std::endl;
         glEnableVertexAttribArray(VERTEX_ATTRIB_TANGENT_IDX);
-        glVertexAttribPointer(VERTEX_ATTRIB_TANGENT_IDX, 3, GL_FLOAT, GL_FALSE,
-            0, (const GLvoid *)globalByteOffset);
 
-        globalByteOffset += sizeForTangent;
+        glVertexAttribPointer(VERTEX_ATTRIB_TANGENT_IDX, 3, GL_FLOAT, GL_FALSE,
+            6 * sizeof(float), (const GLvoid *)(0));
 
         std::cout << "Telling vao how to manage bitangent data" << std::endl;
         glEnableVertexAttribArray(VERTEX_ATTRIB_BITANGENT_IDX);
         glVertexAttribPointer(VERTEX_ATTRIB_BITANGENT_IDX, 3, GL_FLOAT,
-            GL_FALSE, 0, (const GLvoid *)globalByteOffset);
+            GL_FALSE, 6 * sizeof(float), (const GLvoid *)(3 * sizeof(float)));
 
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
         ////////////////////////////////////////////////////////////////
         ///         \NORMAL MAPPING          ///////////////////////////
         ////////////////////////////////////////////////////////////////
@@ -834,46 +755,6 @@ std::vector<GLuint> ViewerApplication::createVertexArrayObjects(
         // on débind le buffer (vbo)
         glBindBuffer(GL_ARRAY_BUFFER, 0);
       }
-
-      /*
-            glBindBuffer(GL_ARRAY_BUFFER, 1);
-
-            // size_t byteOffset = 0;
-
-            int vertexStride = (3 + 3 + 2 + 3 + 3) * sizeof(float);
-            GLintptr vertex_position_offset = 0 * sizeof(float);
-            GLintptr vertex_normal_offset = 3 * sizeof(float);
-            GLintptr vertex_texcoord_offset = 6 * sizeof(float);
-            GLintptr vertex_tangent_offset = 8 * sizeof(float);
-            GLintptr vertex_bitangent_offset = 11 * sizeof(float);
-
-            glEnableVertexAttribArray(VERTEX_ATTRIB_POSITION_IDX);
-            glVertexAttribPointer(VERTEX_ATTRIB_POSITION_IDX, 3, GL_FLOAT,
-         GL_FALSE, vertexStride, (const GLvoid *)vertex_position_offset);
-            // byteOffset += vertexNumber * 3 * sizeof(float);
-
-            glEnableVertexAttribArray(VERTEX_ATTRIB_NORMAL_IDX);
-            glVertexAttribPointer(VERTEX_ATTRIB_POSITION_IDX, 3, GL_FLOAT,
-         GL_FALSE, vertexStride, (const GLvoid *)vertex_normal_offset);
-            // byteOffset += vertexNumber * 3 * sizeof(float);
-
-            glEnableVertexAttribArray(VERTEX_ATTRIB_NORMAL_IDX);
-            glVertexAttribPointer(VERTEX_ATTRIB_TEXCOORD0_IDX, 2, GL_FLOAT,
-         GL_FALSE, vertexStride, (const GLvoid *)vertex_texcoord_offset);
-            // byteOffset += vertexNumber * 2 * sizeof(float);
-
-            glEnableVertexAttribArray(VERTEX_ATTRIB_TANGENT_IDX);
-            glVertexAttribPointer(VERTEX_ATTRIB_TANGENT_IDX, 3, GL_FLOAT,
-         GL_FALSE, vertexStride, (const GLvoid *)vertex_tangent_offset);
-            // byteOffset += vertexNumber * 3 * sizeof(float);
-
-            glEnableVertexAttribArray(VERTEX_ATTRIB_BITANGENT_IDX);
-            glVertexAttribPointer(VERTEX_ATTRIB_BITANGENT_IDX, 3, GL_FLOAT,
-         GL_FALSE, vertexStride, (const GLvoid *)vertex_bitangent_offset);
-
-            glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-            */
     }
   }
   compteur++;
@@ -958,7 +839,6 @@ void ViewerApplication::computeTangentAndBitangentCoordinates(
     bitangent = (deltaPos2 * deltaUV1.x - deltaPos1 * deltaUV2.x) * r;
 
     // Set the same tangent for all three vertices of the triangle.
-    // They will be merged later, in vboindexer.cpp
     tangents.push_back(tangent);
     tangents.push_back(tangent);
     tangents.push_back(tangent);

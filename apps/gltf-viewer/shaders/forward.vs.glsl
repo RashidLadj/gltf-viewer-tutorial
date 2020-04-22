@@ -27,13 +27,12 @@ void main()
 
     // On multiplie par la modelMatrix car on veut uniquement leur orientation dans le "tangent space",
     //si on voulait aussi leur directino il faudrait multiplier en plus par la normal matrix
-    //vec3 T = normalize(vec3(uModelMatrix * vec4(aTangent, 0.0)));
-    //vec3 B = normalize(vec3(uModelMatrix * vec4(aBitangent, 0.0)));
-    //vec3 N = normalize(vec3(uModelMatrix * vec4(aNormal, 0.0)));
-    //TBN = mat3(T, B, N);
-    //vTangent = T;
+    vec3 T = normalize(vec3(uModelMatrix * vec4(aTangent, 0.0)));
+    vec3 B = normalize(vec3(uModelMatrix * vec4(aBitangent, 0.0)));
+    vec3 N = normalize(vec3(uModelMatrix * vec4(aNormal, 0.0)));
+    TBN = mat3(T, B, N);
 
-    vTangent = aTangent;
+    vTangent = normalize(aTangent);
 
     gl_Position =  uModelViewProjMatrix * vec4(aPosition, 1.0);
 }
