@@ -1,10 +1,10 @@
 #pragma once
 
+#include "tiny_gltf.h"
 #include "utils/GLFWHandle.hpp"
 #include "utils/cameraControllerInterface.hpp"
 #include "utils/filesystem.hpp"
 #include "utils/shaders.hpp"
-#include "tiny_gltf.h"
 
 class ViewerApplication
 {
@@ -22,6 +22,15 @@ private:
   {
     GLsizei begin; // Index of first element in vertexArrayObjects
     GLsizei count; // Number of elements in range
+  };
+
+  struct Light
+  {
+    // vec3 position; // No longer necessery when using directional lights.
+    glm::vec3 direction;
+    glm::vec3 ambient;
+    glm::vec3 diffuse;
+    glm::vec3 specular;
   };
 
   GLsizei m_nWindowWidth = 1280;
@@ -57,8 +66,10 @@ private:
     the creation of a GLFW windows and thus a GL context which must exists
     before most of OpenGL function calls.
   */
-  bool loadGltfFile(tinygltf::Model & model);
-  std::vector<GLuint> createBufferObjects( const tinygltf::Model &model);
-  std::vector<GLuint> createVertexArrayObjects( const tinygltf::Model &model, const std::vector<GLuint> &bufferObjects, std::vector<VaoRange> & meshIndexToVaoRange);
+  bool loadGltfFile(tinygltf::Model &model);
+  std::vector<GLuint> createBufferObjects(const tinygltf::Model &model);
+  std::vector<GLuint> createVertexArrayObjects(const tinygltf::Model &model,
+      const std::vector<GLuint> &bufferObjects,
+      std::vector<VaoRange> &meshIndexToVaoRange);
   std::vector<GLuint> createTextureObjects(const tinygltf::Model &model) const;
 };

@@ -48,9 +48,9 @@ int ViewerApplication::run()
   const auto normalMatrix =
       glGetUniformLocation(glslProgram.glId(), "uNormalMatrix");
   const auto uLightDirection =
-      glGetUniformLocation(glslProgram.glId(), "uLightDirection");
+      glGetUniformLocation(glslProgram.glId(), "dirLight.uLightDirection");
   const auto uLightIntensity =
-      glGetUniformLocation(glslProgram.glId(), "uLightIntensity");
+      glGetUniformLocation(glslProgram.glId(), "dirLight.uLightIntensity");
   const auto uBaseColorTexture =
       glGetUniformLocation(glslProgram.glId(), "uBaseColorTexture");
   const auto uBaseColorFactor =
@@ -505,7 +505,8 @@ int ViewerApplication::run()
           cameraController->setCamera(currentCamera);
         }
         /** Parameter of Light**/
-        if (ImGui::CollapsingHeader("Light", ImGuiTreeNodeFlags_DefaultOpen)) {
+        if (ImGui::CollapsingHeader(
+                "Direcional Light", ImGuiTreeNodeFlags_DefaultOpen)) {
           static float theta = 0.f;
           static float phi = 0.f;
 
