@@ -560,11 +560,9 @@ std::vector<GLuint> ViewerApplication::createBufferObjects(
     std::vector<float> buffer;
 
     std::vector<glm::vec3> pos;
-    std::vector<glm::vec3> normal;
     std::vector<glm::vec2> texCoord0;
 
     computePos(model, pos);
-    computeNormal(model, normal);
     computeTexCoord(model, texCoord0);
 
     // Computing tangent and bitangent
@@ -573,19 +571,13 @@ std::vector<GLuint> ViewerApplication::createBufferObjects(
 
     computeTangentAndBitangentCoordinates(tangents, bitangents, pos, texCoord0);
 
-    for (int i = 0; i < 10; ++i) {
-
-      std::cout << glm::dot(glm::vec3(0, 0, 1), tangents[i]) << std::endl;
-    }
-
     for (int i = 0; i < pos.size(); ++i) {
       buffer.push_back(tangents[i].x);
       buffer.push_back(tangents[i].y);
       buffer.push_back(tangents[i].z);
-      // Now we use the property B = cross(N, T), we don't need to calculate
-      // bitangent no more buffer.push_back(bitangents[i].x);
-      // buffer.push_back(bitangents[i].y);
-      // buffer.push_back(bitangents[i].z);
+      buffer.push_back(tangents[i].x);
+      buffer.push_back(tangents[i].y);
+      buffer.push_back(tangents[i].z);
     }
 
     // je bind un 2e vbo indexé après tous les autres vbo potentiels
@@ -619,7 +611,7 @@ std::vector<GLuint> ViewerApplication::createVertexArrayObjects(
   const GLuint VERTEX_ATTRIB_NORMAL_IDX = 1;
   const GLuint VERTEX_ATTRIB_TEXCOORD0_IDX = 2;
   const GLuint VERTEX_ATTRIB_TANGENT_IDX = 3;
-  // const GLuint VERTEX_ATTRIB_BITANGENT_IDX = 4;
+  const GLuint VERTEX_ATTRIB_BITANGENT_IDX = 4;
 
   // { Indice of Mesh , Number of primitives}  need this to Draw After
   meshIndexToVaoRange.resize(model.meshes.size());
@@ -729,16 +721,12 @@ std::vector<GLuint> ViewerApplication::createVertexArrayObjects(
         glEnableVertexAttribArray(VERTEX_ATTRIB_TANGENT_IDX);
 
         glVertexAttribPointer(VERTEX_ATTRIB_TANGENT_IDX, 3, GL_FLOAT, GL_FALSE,
-            3 * sizeof(float),
-            (const GLvoid
-                    *)(0)); // if we send also bitangent, step = 6*sizeof(float)
+            3 * sizeof(float), (const GLvoid *)(0));
 
-        /*
         std::cout << "Telling vao how to manage bitangent data" << std::endl;
         glEnableVertexAttribArray(VERTEX_ATTRIB_BITANGENT_IDX);
         glVertexAttribPointer(VERTEX_ATTRIB_BITANGENT_IDX, 3, GL_FLOAT,
             GL_FALSE, 6 * sizeof(float), (const GLvoid *)(3 * sizeof(float)));
-        */
 
         glBindBuffer(GL_ARRAY_BUFFER, 0);
         ////////////////////////////////////////////////////////////////
@@ -823,9 +811,9 @@ void ViewerApplication::computeTangentAndBitangentCoordinates(
   glm::vec3 bitangent;
   for (int i = 0; i < pos.size(); i += 3) {
     // Shortcuts for vertices
-    glm::vec3 &p0 = pos[i + 0];
-    glm::vec3 &p1 = pos[i + 1];
-    glm::vec3 &p2 = pos[i + 2];
+    glm::vec3 &v0 = pos[i + 0];
+    glm::vec3 &v1 = pos[i + 1];
+    glm::vec3 &v2 = pos[i + 2];
 
     // Shortcuts for UVs
     glm::vec2 &uv0 = texCoord0[i + 0];
@@ -833,18 +821,18 @@ void ViewerApplication::computeTangentAndBitangentCoordinates(
     glm::vec2 &uv2 = texCoord0[i + 2];
 
     // Edges of the triangle : position delta
-    glm::vec3 deltaPos1 = p1 - p0;
-    glm::vec3 deltaPos2 = p2 - p0;
+    glm::vec3 deltaPos1 = v1 - v0;
+    glm::vec3 deltaPos2 = v2 - v0;
 
     // UV delta
     glm::vec2 deltaUV1 = uv1 - uv0;
     glm::vec2 deltaUV2 = uv2 - uv0;
 
     float r = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV1.y * deltaUV2.x);
-    tangent = (deltaPos1 * deltaUV2.y - deltaPos2 * deltaUV1.y) * r;
+    tangent = glm::vec3(
+        1, 0, 0); //(deltaPos1 * deltaUV2.y - deltaPos2 * deltaUV1.y) * r;
     bitangent = (deltaPos2 * deltaUV1.x - deltaPos1 * deltaUV2.x) * r;
 
-    tangent = glm::vec3(1, 0, 0);
     // Set the same tangent for all three vertices of the triangle.
     tangents.push_back(tangent);
     tangents.push_back(tangent);
@@ -873,119 +861,6 @@ void ViewerApplication::computePos(
               const auto &primitive = mesh.primitives[pIdx];
               const auto positionAttrIdxIt =
                   primitive.attributes.find("POSITION");
-              if (positionAttrIdxIt == end(primitive.attributes)) {
-                continue;
-              }
-              const auto &positionAccessor =
-                  model.accessors[(*positionAttrIdxIt).second];
-              if (positionAccessor.type != 3) {
-                std::cerr << "Position accessor with type != VEC3, skipping"
-                          << std::endl;
-                continue;
-              }
-              const auto &positionBufferView =
-                  model.bufferViews[positionAccessor.bufferView];
-              const auto byteOffset =
-                  positionAccessor.byteOffset + positionBufferView.byteOffset;
-              const auto &positionBuffer =
-                  model.buffers[positionBufferView.buffer];
-              const auto positionByteStride =
-                  positionBufferView.byteStride ? positionBufferView.byteStride
-                                                : 3 * sizeof(float);
-
-              if (primitive.indices >= 0) {
-                const auto &indexAccessor = model.accessors[primitive.indices];
-                const auto &indexBufferView =
-                    model.bufferViews[indexAccessor.bufferView];
-                const auto indexByteOffset =
-                    indexAccessor.byteOffset + indexBufferView.byteOffset;
-                const auto &indexBuffer = model.buffers[indexBufferView.buffer];
-                auto indexByteStride = indexBufferView.byteStride;
-
-                switch (indexAccessor.componentType) {
-                default:
-                  std::cerr
-                      << "Primitive index accessor with bad componentType "
-                      << indexAccessor.componentType << ", skipping it."
-                      << std::endl;
-                  continue;
-                case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
-                  indexByteStride =
-                      indexByteStride ? indexByteStride : sizeof(uint8_t);
-                  break;
-                case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
-                  indexByteStride =
-                      indexByteStride ? indexByteStride : sizeof(uint16_t);
-                  break;
-                case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
-                  indexByteStride =
-                      indexByteStride ? indexByteStride : sizeof(uint32_t);
-                  break;
-                }
-
-                for (size_t i = 0; i < indexAccessor.count; ++i) {
-                  uint32_t index = 0;
-                  switch (indexAccessor.componentType) {
-                  case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
-                    index = *((const uint8_t *)&indexBuffer
-                                  .data[indexByteOffset + indexByteStride * i]);
-                    break;
-                  case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
-                    index = *((const uint16_t *)&indexBuffer
-                                  .data[indexByteOffset + indexByteStride * i]);
-                    break;
-                  case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
-                    index = *((const uint32_t *)&indexBuffer
-                                  .data[indexByteOffset + indexByteStride * i]);
-                    break;
-                  }
-                  const auto &localPosition =
-                      *((const glm::vec3 *)&positionBuffer
-                              .data[byteOffset + positionByteStride * index]);
-                  const auto worldPosition =
-                      glm::vec3(modelMatrix * glm::vec4(localPosition, 1.f));
-
-                  pos.push_back(worldPosition);
-                }
-              } else {
-                for (size_t i = 0; i < positionAccessor.count; ++i) {
-                  const auto &localPosition =
-                      *((const glm::vec3 *)&positionBuffer
-                              .data[byteOffset + positionByteStride * i]);
-                  const auto worldPosition =
-                      glm::vec3(modelMatrix * glm::vec4(localPosition, 1.f));
-
-                  pos.push_back(worldPosition);
-                }
-              }
-            }
-          }
-          for (const auto childNodeIdx : node.children) {
-            addPos(childNodeIdx, modelMatrix);
-          }
-        };
-    for (const auto nodeIdx : model.scenes[model.defaultScene].nodes) {
-      addPos(nodeIdx, glm::mat4(1));
-    }
-  }
-}
-
-void ViewerApplication::computeNormal(
-    const tinygltf::Model &model, std::vector<glm::vec3> &pos)
-{
-  if (model.defaultScene >= 0) {
-    const std::function<void(int, const glm::mat4 &)> addPos =
-        [&](int nodeIdx, const glm::mat4 &parentMatrix) {
-          const auto &node = model.nodes[nodeIdx];
-          const glm::mat4 modelMatrix =
-              getLocalToWorldMatrix(node, parentMatrix);
-          if (node.mesh >= 0) {
-            const auto &mesh = model.meshes[node.mesh];
-            for (size_t pIdx = 0; pIdx < mesh.primitives.size(); ++pIdx) {
-
-              const auto &primitive = mesh.primitives[pIdx];
-              const auto positionAttrIdxIt =
-                  primitive.attributes.find("NORMAL");
               if (positionAttrIdxIt == end(primitive.attributes)) {
                 continue;
               }
