@@ -1,12 +1,21 @@
 #version 330
 
 /** Directional Light **/
-struct directionalLight
-{
+struct directionalLight{
   vec3 uLightDirection;
   vec3 uLightIntensity;
 };
 uniform directionalLight dirLight;
+
+/** Point Light **/
+struct PointLight {    
+    vec3 position;
+    vec3  color;
+    float constant;
+    float linear;
+    float quadratic;  
+};
+uniform PointLight pointLight;
 
 
 in vec3 vViewSpacePosition;
@@ -55,13 +64,12 @@ vec3 directionalLightValue() {
   vec3 V = normalize(-vViewSpacePosition);
   vec3 H = normalize(L + V);
 
-  vec4 baseColorFromTexture =
-      SRGBtoLINEAR(texture(uBaseColorTexture, vTexCoords));
+  vec4 baseColorFromTexture = SRGBtoLINEAR(texture(uBaseColorTexture, vTexCoords));
   vec4 baseColor = baseColorFromTexture * uBaseColorFactor;
-  vec4 metallicRougnessFromTexture =
-      texture(uMetallicRoughnessTexture, vTexCoords);
-  float roughness = uRoughnessFactor * metallicRougnessFromTexture.g;
+
+  vec4 metallicRougnessFromTexture = texture(uMetallicRoughnessTexture, vTexCoords);
   vec3 metallic = vec3(uMetallicFactor * metallicRougnessFromTexture.b);
+    float roughness = uRoughnessFactor * metallicRougnessFromTexture.g;
 
   vec3 cDiff = mix(baseColor.rgb * (1 - dielectricSpecular.r), black, metallic);
   vec3 F0 = mix(vec3(dielectricSpecular), baseColor.rgb, metallic);
@@ -109,8 +117,76 @@ vec3 directionalLightValue() {
       (f_diffuse + f_specular) * dirLight.uLightIntensity * NdotL + emissive);
 }
 
+vec3 pointLightValue() {
+	vec3 N = normalize(vViewSpaceNormal);
+  /** lightDir **/
+  vec3 L = normalize(pointLight.position - vViewSpacePosition);
+  vec3 V = normalize(-vViewSpacePosition);
+  vec3 H = normalize(L + V);
+
+  vec4 baseColorFromTexture = SRGBtoLINEAR(texture(uBaseColorTexture, vTexCoords));
+  vec4 baseColor = baseColorFromTexture * uBaseColorFactor;
+
+  vec4 metallicRougnessFromTexture = texture(uMetallicRoughnessTexture, vTexCoords);
+  vec3 metallic = vec3(uMetallicFactor * metallicRougnessFromTexture.b);
+  float roughness = uRoughnessFactor * metallicRougnessFromTexture.g;
+
+  vec3 cDiff = mix(baseColor.rgb * (1 - dielectricSpecular.r), black, metallic);
+  vec3 F0 = mix(vec3(dielectricSpecular), baseColor.rgb, metallic);
+  float _alpha = roughness * roughness;
+  float _alphaPow2 = _alpha * _alpha;
+
+  float NdotL = clamp(dot(N, L), 0.0, 1.0);
+  float NdotV = clamp(dot(N, V), 0.0, 1.0);
+  float NdotH = clamp(dot(N, H), 0.0, 1.0);
+  float VdotH = clamp(dot(V, H), 0.0, 1.0);
+
+  vec3 diffuse = cDiff * M_1_PI;
+
+   /** F **/
+  float baseShlickFactor = 1 - VdotH;
+  float shlickFactor = baseShlickFactor * baseShlickFactor; // power 2
+  shlickFactor *= shlickFactor;                             // power 4
+  shlickFactor *= baseShlickFactor;                         // power 5
+  vec3 F = F0 + (1 - F0) * shlickFactor;
+
+  /** Vis **/
+  float Vis = 0;
+  float denumVis =
+      (NdotL)*sqrt((NdotV * NdotV) * (1 - _alphaPow2) + _alphaPow2) +
+      (NdotV)*sqrt((NdotL * NdotL) * (1 - _alphaPow2) + _alphaPow2);
+  if (denumVis > 0) {
+    Vis = 0.5 / denumVis;
+  }
+
+  /** D **/
+  float DenumD = M_PI * ((NdotH * NdotH * (_alphaPow2 - 1) + 1) *
+                            (NdotH * NdotH * (_alphaPow2 - 1) + 1));
+  float D = _alphaPow2 / DenumD;
+
+  /** f_specular = F . Vis . D **/
+  vec3 f_specular = F * Vis * D;
+  vec3 f_diffuse = (1 - F) * diffuse;
+
+  vec4 emissiveRougnessFromTexture = SRGBtoLINEAR(texture(uEmissiveTexture, vTexCoords));
+  vec3 emissive = uEmissiveFactor * emissiveRougnessFromTexture.rgb;
+
+  // attenuation
+  float distance    = length(pointLight.position - vViewSpacePosition);
+  float attenuation = 1.0 / (pointLight.constant + pointLight.linear * distance + 
+          pointLight.quadratic * (distance * distance));
+
+  f_diffuse *= attenuation;
+  f_specular *= attenuation;
+
+  vec3 color = LINEARtoSRGB(
+       (f_diffuse + f_specular) * pointLight.color * NdotL + emissive);
+  return color;
+}
+
 void main()
 {
   fColor = vec3(0.f);
-  fColor = directionalLightValue();
+  fColor += directionalLightValue();
+  fColor += pointLightValue();
 }

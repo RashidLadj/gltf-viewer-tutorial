@@ -47,10 +47,25 @@ int ViewerApplication::run()
       glGetUniformLocation(glslProgram.glId(), "uModelViewMatrix");
   const auto normalMatrix =
       glGetUniformLocation(glslProgram.glId(), "uNormalMatrix");
+
+  /** Directional Light **/
   const auto uLightDirection =
       glGetUniformLocation(glslProgram.glId(), "dirLight.uLightDirection");
   const auto uLightIntensity =
       glGetUniformLocation(glslProgram.glId(), "dirLight.uLightIntensity");
+
+  /** Point light **/
+  const auto uPointLightPosition =
+      glGetUniformLocation(glslProgram.glId(), "pointLight.position");
+  const auto uPointLightColor =
+      glGetUniformLocation(glslProgram.glId(), "pointLight.color");
+  const auto uPointLightConstant =
+      glGetUniformLocation(glslProgram.glId(), "pointLight.constant");
+  const auto uPointLightQuadratic =
+      glGetUniformLocation(glslProgram.glId(), "pointLight.quadratic");
+  const auto uPointLightLinear =
+      glGetUniformLocation(glslProgram.glId(), "pointLight.linear");
+
   const auto uBaseColorTexture =
       glGetUniformLocation(glslProgram.glId(), "uBaseColorTexture");
   const auto uBaseColorFactor =
@@ -116,9 +131,15 @@ int ViewerApplication::run()
     cameraController->setCamera(Camera{eye, center, up});
   }
 
+  /** Directional Light **/
   auto lightDirection = glm::vec3(1.f);
   auto lightIntensity = glm::vec3(1.f);
   bool lightFromCamera = false;
+
+  /** Point Light **/
+  auto pointLightIntensity = glm::vec3(1.f);
+  bool pointLightFromCamera = true;
+  auto pointLightPosition = glm::vec3(-10.f, 5.f, 0.f);
 
   const std::vector<GLuint> textureObjects = createTextureObjects(model);
   float white[] = {1, 1, 1, 1};
@@ -360,7 +381,7 @@ int ViewerApplication::run()
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     const auto viewMatrix = camera.getViewMatrix();
-
+    /** Directionnal Light **/
     if (uLightDirection >= 0) {
       if (lightFromCamera)
         glUniform3f(uLightDirection, 0, 0, 1);
@@ -371,6 +392,21 @@ int ViewerApplication::run()
     }
     if (uLightIntensity >= 0) {
       glUniform3fv(uLightIntensity, 1, glm::value_ptr(lightIntensity));
+    }
+
+    /** point Light **/
+    if (uPointLightPosition >= 0) {
+      if (pointLightFromCamera) {
+        glUniform3fv(uPointLightPosition, 1,
+            glm::value_ptr(glm::normalize(
+                glm::vec3(viewMatrix * glm::vec4(pointLightPosition, 1.)))));
+        glUniform3fv(uPointLightColor, 1, glm::value_ptr(pointLightIntensity));
+        glUniform1f(uPointLightConstant, 1.0f);
+        glUniform1f(uPointLightLinear, 0.09f);
+        glUniform1f(uPointLightQuadratic, 0.032f);
+      } else {
+        glUniform3fv(uPointLightColor, 1, glm::value_ptr(glm::vec3(0, 0, 0)));
+      }
     }
 
     // The recursive function that should draw a node
@@ -504,7 +540,7 @@ int ViewerApplication::run()
           }
           cameraController->setCamera(currentCamera);
         }
-        /** Parameter of Light**/
+        /** Parameter of Directionnal Light **/
         if (ImGui::CollapsingHeader(
                 "Direcional Light", ImGuiTreeNodeFlags_DefaultOpen)) {
           static float theta = 0.f;
@@ -520,16 +556,40 @@ int ViewerApplication::run()
                 glm::vec3(sinTheta * cosPhi, cosTheta, sinTheta * sinPhi);
           }
 
+          ImGui::Text("Directional light -> %.3f %.3f %.3f", lightDirection.x,
+              lightDirection.y, lightDirection.z);
+
           static auto lightColor = glm::vec3(1.f);
           static float lightIntensityFactor = 1.f;
 
-          if (ImGui::SliderFloat("Intensity", &lightIntensityFactor, 0, 10.f) ||
+          if (ImGui::SliderFloat(
+                  "dirIntensity", &lightIntensityFactor, 0, 10.f) ||
               ImGui::ColorEdit3(
-                  "color", reinterpret_cast<float *>(&lightColor))) {
+                  "dirColor", reinterpret_cast<float *>(&lightColor))) {
             lightIntensity = lightColor * lightIntensityFactor;
           }
         }
         ImGui::Checkbox("Light from camera", &lightFromCamera);
+
+        /** Parameter of Point Light **/
+        if (ImGui::CollapsingHeader(
+                "Point Light", ImGuiTreeNodeFlags_DefaultOpen)) {
+          static auto pointLightColor = glm::vec3(1.f);
+          static float lightIntensityFactor = 1.f;
+          if (ImGui::SliderFloat("posX", &pointLightPosition.x, -10, 10.f) ||
+              ImGui::SliderFloat("posY", &pointLightPosition.y, -10, 10.f) ||
+              ImGui::SliderFloat("posZ", &pointLightPosition.z, -10, 10.f)) {
+            ImGui::Text("Point light -> %.3f %.3f %.3f", pointLightPosition.x,
+                pointLightPosition.y, pointLightPosition.z);
+          }
+          if (ImGui::SliderFloat(
+                  "pointIntensity", &lightIntensityFactor, 0, 10.f) ||
+              ImGui::ColorEdit3(
+                  "pointColor", reinterpret_cast<float *>(&pointLightColor))) {
+            pointLightIntensity = pointLightColor * lightIntensityFactor;
+          }
+        }
+        ImGui::Checkbox("PointLight from camera", &pointLightFromCamera);
       }
       ImGui::End();
     }
