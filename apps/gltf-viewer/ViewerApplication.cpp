@@ -138,16 +138,12 @@ int ViewerApplication::run()
   glBindTexture(GL_TEXTURE_2D, 0);
 
   // Creation of Buffer Objects
-  size_t vertexNumber;
-
-  const auto bufferObjects = createBufferObjects(model, vertexNumber);
-
-  std::cout << "vertex number : " << vertexNumber << std::endl;
+  const auto bufferObjects = createBufferObjects(model);
 
   // Creation of Vertex Array Objects
   std::vector<VaoRange> meshToVertexArrays;
-  const auto vertexArrayObjects = createVertexArrayObjects(
-      model, bufferObjects, meshToVertexArrays, vertexNumber);
+  const auto vertexArrayObjects =
+      createVertexArrayObjects(model, bufferObjects, meshToVertexArrays);
 
   // Setup OpenGL state for rendering
   glEnable(GL_DEPTH_TEST);
@@ -527,7 +523,7 @@ bool ViewerApplication::loadGltfFile(tinygltf::Model &model)
 }
 
 std::vector<GLuint> ViewerApplication::createBufferObjects(
-    const tinygltf::Model &model, size_t &vertexNumber)
+    const tinygltf::Model &model)
 {
   // create a vector of GLuint with the correct size (model.buffers.size()) and
   // use glGenBuffers to create buffer objects.
@@ -564,12 +560,12 @@ std::vector<GLuint> ViewerApplication::createBufferObjects(
     std::vector<float> buffer;
 
     std::vector<glm::vec3> pos;
+    std::vector<glm::vec3> normal;
     std::vector<glm::vec2> texCoord0;
 
     computePos(model, pos);
+    computeNormal(model, normal);
     computeTexCoord(model, texCoord0);
-
-    vertexNumber = pos.size();
 
     // Computing tangent and bitangent
     std::vector<glm::vec3> tangents;
@@ -577,13 +573,19 @@ std::vector<GLuint> ViewerApplication::createBufferObjects(
 
     computeTangentAndBitangentCoordinates(tangents, bitangents, pos, texCoord0);
 
+    for (int i = 0; i < 10; ++i) {
+
+      std::cout << glm::dot(glm::vec3(0, 0, 1), tangents[i]) << std::endl;
+    }
+
     for (int i = 0; i < pos.size(); ++i) {
       buffer.push_back(tangents[i].x);
       buffer.push_back(tangents[i].y);
       buffer.push_back(tangents[i].z);
-      buffer.push_back(bitangents[i].x);
-      buffer.push_back(bitangents[i].y);
-      buffer.push_back(bitangents[i].z);
+      // Now we use the property B = cross(N, T), we don't need to calculate
+      // bitangent no more buffer.push_back(bitangents[i].x);
+      // buffer.push_back(bitangents[i].y);
+      // buffer.push_back(bitangents[i].z);
     }
 
     // je bind un 2e vbo indexé après tous les autres vbo potentiels
@@ -610,14 +612,14 @@ std::vector<GLuint> ViewerApplication::createBufferObjects(
 
 std::vector<GLuint> ViewerApplication::createVertexArrayObjects(
     const tinygltf::Model &model, const std::vector<GLuint> &bufferObjects,
-    std::vector<VaoRange> &meshIndexToVaoRange, size_t vertexNumber)
+    std::vector<VaoRange> &meshIndexToVaoRange)
 {
   std::vector<GLuint> vertexArrayObjects;
   const GLuint VERTEX_ATTRIB_POSITION_IDX = 0;
   const GLuint VERTEX_ATTRIB_NORMAL_IDX = 1;
   const GLuint VERTEX_ATTRIB_TEXCOORD0_IDX = 2;
   const GLuint VERTEX_ATTRIB_TANGENT_IDX = 3;
-  const GLuint VERTEX_ATTRIB_BITANGENT_IDX = 4;
+  // const GLuint VERTEX_ATTRIB_BITANGENT_IDX = 4;
 
   // { Indice of Mesh , Number of primitives}  need this to Draw After
   meshIndexToVaoRange.resize(model.meshes.size());
@@ -727,12 +729,16 @@ std::vector<GLuint> ViewerApplication::createVertexArrayObjects(
         glEnableVertexAttribArray(VERTEX_ATTRIB_TANGENT_IDX);
 
         glVertexAttribPointer(VERTEX_ATTRIB_TANGENT_IDX, 3, GL_FLOAT, GL_FALSE,
-            6 * sizeof(float), (const GLvoid *)(0));
+            3 * sizeof(float),
+            (const GLvoid
+                    *)(0)); // if we send also bitangent, step = 6*sizeof(float)
 
+        /*
         std::cout << "Telling vao how to manage bitangent data" << std::endl;
         glEnableVertexAttribArray(VERTEX_ATTRIB_BITANGENT_IDX);
         glVertexAttribPointer(VERTEX_ATTRIB_BITANGENT_IDX, 3, GL_FLOAT,
             GL_FALSE, 6 * sizeof(float), (const GLvoid *)(3 * sizeof(float)));
+        */
 
         glBindBuffer(GL_ARRAY_BUFFER, 0);
         ////////////////////////////////////////////////////////////////
@@ -817,9 +823,9 @@ void ViewerApplication::computeTangentAndBitangentCoordinates(
   glm::vec3 bitangent;
   for (int i = 0; i < pos.size(); i += 3) {
     // Shortcuts for vertices
-    glm::vec3 &v0 = pos[i + 0];
-    glm::vec3 &v1 = pos[i + 1];
-    glm::vec3 &v2 = pos[i + 2];
+    glm::vec3 &p0 = pos[i + 0];
+    glm::vec3 &p1 = pos[i + 1];
+    glm::vec3 &p2 = pos[i + 2];
 
     // Shortcuts for UVs
     glm::vec2 &uv0 = texCoord0[i + 0];
@@ -827,8 +833,8 @@ void ViewerApplication::computeTangentAndBitangentCoordinates(
     glm::vec2 &uv2 = texCoord0[i + 2];
 
     // Edges of the triangle : position delta
-    glm::vec3 deltaPos1 = v1 - v0;
-    glm::vec3 deltaPos2 = v2 - v0;
+    glm::vec3 deltaPos1 = p1 - p0;
+    glm::vec3 deltaPos2 = p2 - p0;
 
     // UV delta
     glm::vec2 deltaUV1 = uv1 - uv0;
@@ -838,6 +844,7 @@ void ViewerApplication::computeTangentAndBitangentCoordinates(
     tangent = (deltaPos1 * deltaUV2.y - deltaPos2 * deltaUV1.y) * r;
     bitangent = (deltaPos2 * deltaUV1.x - deltaPos1 * deltaUV2.x) * r;
 
+    tangent = glm::vec3(1, 0, 0);
     // Set the same tangent for all three vertices of the triangle.
     tangents.push_back(tangent);
     tangents.push_back(tangent);
@@ -964,10 +971,10 @@ void ViewerApplication::computePos(
 }
 
 void ViewerApplication::computeNormal(
-    const tinygltf::Model &model, std::vector<glm::vec3> &normal)
+    const tinygltf::Model &model, std::vector<glm::vec3> &pos)
 {
   if (model.defaultScene >= 0) {
-    const std::function<void(int, const glm::mat4 &)> addNormal =
+    const std::function<void(int, const glm::mat4 &)> addPos =
         [&](int nodeIdx, const glm::mat4 &parentMatrix) {
           const auto &node = model.nodes[nodeIdx];
           const glm::mat4 modelMatrix =
@@ -977,24 +984,26 @@ void ViewerApplication::computeNormal(
             for (size_t pIdx = 0; pIdx < mesh.primitives.size(); ++pIdx) {
 
               const auto &primitive = mesh.primitives[pIdx];
-              const auto normalAttrIdxIt = primitive.attributes.find("NORMAL");
-              if (normalAttrIdxIt == end(primitive.attributes)) {
+              const auto positionAttrIdxIt =
+                  primitive.attributes.find("NORMAL");
+              if (positionAttrIdxIt == end(primitive.attributes)) {
                 continue;
               }
-              const auto &normalAccessor =
-                  model.accessors[(*normalAttrIdxIt).second];
-              if (normalAccessor.type != 3) {
-                std::cerr << "normal accessor with type != VEC3, skipping"
+              const auto &positionAccessor =
+                  model.accessors[(*positionAttrIdxIt).second];
+              if (positionAccessor.type != 3) {
+                std::cerr << "Position accessor with type != VEC3, skipping"
                           << std::endl;
                 continue;
               }
-              const auto &normalBufferView =
-                  model.bufferViews[normalAccessor.bufferView];
+              const auto &positionBufferView =
+                  model.bufferViews[positionAccessor.bufferView];
               const auto byteOffset =
-                  normalAccessor.byteOffset + normalBufferView.byteOffset;
-              const auto &normalBuffer = model.buffers[normalBufferView.buffer];
-              const auto normalByteStride = normalBufferView.byteStride
-                                                ? normalBufferView.byteStride
+                  positionAccessor.byteOffset + positionBufferView.byteOffset;
+              const auto &positionBuffer =
+                  model.buffers[positionBufferView.buffer];
+              const auto positionByteStride =
+                  positionBufferView.byteStride ? positionBufferView.byteStride
                                                 : 3 * sizeof(float);
 
               if (primitive.indices >= 0) {
@@ -1043,33 +1052,33 @@ void ViewerApplication::computeNormal(
                                   .data[indexByteOffset + indexByteStride * i]);
                     break;
                   }
-                  const auto &localNormal =
-                      *((const glm::vec3 *)&normalBuffer
-                              .data[byteOffset + normalByteStride * index]);
-                  const auto worldNormal =
-                      glm::vec3(modelMatrix * glm::vec4(localNormal, 1.f));
+                  const auto &localPosition =
+                      *((const glm::vec3 *)&positionBuffer
+                              .data[byteOffset + positionByteStride * index]);
+                  const auto worldPosition =
+                      glm::vec3(modelMatrix * glm::vec4(localPosition, 1.f));
 
-                  normal.push_back(worldNormal);
+                  pos.push_back(worldPosition);
                 }
               } else {
-                for (size_t i = 0; i < normalAccessor.count; ++i) {
-                  const auto &localNormal =
-                      *((const glm::vec3 *)&normalBuffer
-                              .data[byteOffset + normalByteStride * i]);
-                  const auto worldNormal =
-                      glm::vec3(modelMatrix * glm::vec4(localNormal, 1.f));
+                for (size_t i = 0; i < positionAccessor.count; ++i) {
+                  const auto &localPosition =
+                      *((const glm::vec3 *)&positionBuffer
+                              .data[byteOffset + positionByteStride * i]);
+                  const auto worldPosition =
+                      glm::vec3(modelMatrix * glm::vec4(localPosition, 1.f));
 
-                  normal.push_back(worldNormal);
+                  pos.push_back(worldPosition);
                 }
               }
             }
           }
           for (const auto childNodeIdx : node.children) {
-            addNormal(childNodeIdx, modelMatrix);
+            addPos(childNodeIdx, modelMatrix);
           }
         };
     for (const auto nodeIdx : model.scenes[model.defaultScene].nodes) {
-      addNormal(nodeIdx, glm::mat4(1));
+      addPos(nodeIdx, glm::mat4(1));
     }
   }
 }
