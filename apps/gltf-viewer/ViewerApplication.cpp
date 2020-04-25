@@ -568,6 +568,8 @@ std::vector<GLuint> ViewerApplication::createBufferObjects(
 
     std::cout << "pos vector size : " << pos.size() << std::endl;
     std::cout << "pos map size " << posMap.size() << std::endl;
+    std::cout << "gltf buffer size : " << model.buffers[i].data.size()
+              << std::endl;
 
     // Computing tangent and bitangent
     std::vector<glm::vec3> tangents;
