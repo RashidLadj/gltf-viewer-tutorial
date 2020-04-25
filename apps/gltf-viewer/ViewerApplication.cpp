@@ -165,7 +165,7 @@ int ViewerApplication::run()
   auto spotLightDirection = glm::vec3(0.f, 0.f, -1.f);
   bool spotLightFromCamera = true;
   float spotLightCutOff = 12.5f;
-  float spotLightOuterCutOff = 17.5f;
+  float spotLightOuterCutOff = 12.5f;
 
   const std::vector<GLuint> textureObjects = createTextureObjects(model);
   float white[] = {1, 1, 1, 1};
@@ -648,7 +648,7 @@ int ViewerApplication::run()
               ImGui::SliderFloat("posSLZ", &spotLightPosition.z, -10, 10.f) ||
               ImGui::SliderFloat("CutOff", &spotLightCutOff, 5.f, 15.f) ||
               ImGui::SliderFloat(
-                  "OuterCutOff", &spotLightOuterCutOff, 15.f, 100.f)) {
+                  "OuterCutOff", &spotLightOuterCutOff, -12.5f, 12.5f)) {
             ImGui::Text("Spot light Position -> %.3f %.3f %.3f",
                 spotLightPosition.x, spotLightPosition.y, spotLightPosition.z);
           }
