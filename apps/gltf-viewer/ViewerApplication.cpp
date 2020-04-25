@@ -156,14 +156,14 @@ int ViewerApplication::run()
 
   /** Point Light **/
   auto pointLightIntensity = glm::vec3(1.f);
-  bool pointLightFromCamera = true;
+  bool enablePointLight = true;
   auto pointLightPosition = glm::vec3(-10.f, 5.f, 0.f);
 
   /** Spot Light **/
   auto spotLightIntensity = glm::vec3(1.f);
   auto spotLightPosition = glm::vec3(0.f);
   auto spotLightDirection = glm::vec3(0.f, 0.f, -1.f);
-  bool spotLightFromCamera = true;
+  bool enableSpotLight = true;
   float spotLightCutOff = 12.5f;
   float spotLightOuterCutOff = 17.5f;
 
@@ -423,7 +423,7 @@ int ViewerApplication::run()
 
     /** Point Light **/
     if (uPointLightPosition >= 0) {
-      if (pointLightFromCamera) {
+      if (enablePointLight) {
         glUniform3fv(uPointLightPosition, 1,
             glm::value_ptr(glm::normalize(
                 glm::vec3(viewMatrix * glm::vec4(pointLightPosition, 1.)))));
@@ -438,7 +438,7 @@ int ViewerApplication::run()
 
     /** Spot Light **/
     if (uSpotLightPosition >= 0) {
-      if (spotLightFromCamera) {
+      if (enableSpotLight) {
         glUniform3fv(uSpotLightPosition, 1, glm::value_ptr(spotLightPosition));
         glUniform3fv(
             uSpotLightDirection, 1, glm::value_ptr(spotLightDirection));
@@ -635,7 +635,7 @@ int ViewerApplication::run()
             pointLightIntensity = pointLightColor * lightIntensityFactor;
           }
         }
-        ImGui::Checkbox("PointLight from camera", &pointLightFromCamera);
+        ImGui::Checkbox("enable/Disable Point Light ", &enablePointLight);
 
         /** Parameter of Spot Light **/
         if (ImGui::CollapsingHeader(
@@ -646,9 +646,10 @@ int ViewerApplication::run()
           if (ImGui::SliderFloat("posSLX", &spotLightPosition.x, -10, 10.f) ||
               ImGui::SliderFloat("posSLY", &spotLightPosition.y, -10, 10.f) ||
               ImGui::SliderFloat("posSLZ", &spotLightPosition.z, -10, 10.f) ||
-              ImGui::SliderFloat("CutOff", &spotLightCutOff, 5.f, 15.f) ||
               ImGui::SliderFloat(
-                  "OuterCutOff", &spotLightOuterCutOff, 15.f, 100.f)) {
+                  "CutOff", &spotLightCutOff, 0.f, spotLightOuterCutOff) ||
+              ImGui::SliderFloat("OuterCutOff", &spotLightOuterCutOff,
+                  spotLightCutOff, 20.f)) {
             ImGui::Text("Spot light Position -> %.3f %.3f %.3f",
                 spotLightPosition.x, spotLightPosition.y, spotLightPosition.z);
           }
@@ -659,7 +660,7 @@ int ViewerApplication::run()
             spotLightIntensity = spotLightColor * lightIntensityFactor;
           }
         }
-        ImGui::Checkbox("Spot Light from camera", &spotLightFromCamera);
+        ImGui::Checkbox("enable/Disable Spot Light", &enableSpotLight);
       }
       ImGui::End();
     }

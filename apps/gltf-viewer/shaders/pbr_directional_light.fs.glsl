@@ -263,13 +263,13 @@ vec3 spotLightValue() {
 
   vec3 color = LINEARtoSRGB(
        (f_diffuse + f_specular) * spotLight.color * NdotL + emissive);
-
-  if(theta > spotLight.cutOff) 
-  {       
-    return color;
-  }
-  else  // else, use ambient light so scene isn't completely dark outside the spotlight.
-    return LINEARtoSRGB(emissive);
+return color;
+  // if(theta > spotLight.cutOff) 
+  // {       
+  //   return color;
+  // }
+  // else  // else, use ambient light so scene isn't completely dark outside the spotlight.
+  //   return LINEARtoSRGB(emissive);
 }
 
 void main()
