@@ -58,19 +58,26 @@ private:
     before most of OpenGL function calls.
   */
   bool loadGltfFile(tinygltf::Model &model);
-  std::vector<GLuint> createBufferObjects(const tinygltf::Model &model);
+  std::vector<GLuint> createBufferObjects(
+      const tinygltf::Model &model, bool normalMapping);
   std::vector<GLuint> createVertexArrayObjects(const tinygltf::Model &model,
       const std::vector<GLuint> &bufferObjects,
-      std::vector<VaoRange> &meshIndexToVaoRange);
+      std::vector<VaoRange> &meshIndexToVaoRange, bool normalMapping);
   std::vector<GLuint> createTextureObjects(const tinygltf::Model &model) const;
 
   void computeTangentAndBitangentCoordinates(std::vector<glm::vec3> &tangents,
       std::vector<glm::vec3> &bitangents, std::vector<glm::vec3> &pos,
       std::vector<glm::vec2> &texCoord0);
 
-  void computePos(const tinygltf::Model &model, std::vector<glm::vec3> &pos);
-  void computeNormal(
-      const tinygltf::Model &model, std::vector<glm::vec3> &normal);
-  void computeTexCoord(
-      const tinygltf::Model &model, std::vector<glm::vec2> &texCoord0);
+  template <typename T>
+  void computeData(const tinygltf::Model &model, const std::string dataName,
+      std::vector<T> &container, const bool world = false);
+
+  void computePos(const tinygltf::Model &model, std::vector<glm::vec3> &pos,
+      std::map<int, glm::vec3> &posMap);
+  void computeNormal(const tinygltf::Model &model,
+      std::vector<glm::vec3> &normal, std::map<int, glm::vec3> &posMap);
+  void computeTexCoord(const tinygltf::Model &model,
+      std::vector<glm::vec2> &texCoord0,
+      std::map<int, glm::vec2> &texCoord0Map);
 };

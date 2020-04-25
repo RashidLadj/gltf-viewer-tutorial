@@ -50,12 +50,12 @@ vec4 SRGBtoLINEAR(vec4 srgbIn){
 }
 
 void main(){
-    //vec3 N = normalize(vViewSpaceNormal);
+    vec3 N = normalize(vViewSpaceNormal);
 
     //NORMAL MAPPING//
-    vec3 N = texture(uNormalTexture, vTexCoords).rgb;
-    N = N * 2.0 - 1.0;   
-    N = normalize(TBN * N);
+    //vec3 N = texture(uNormalTexture, vTexCoords).rgb;
+    //N = N * 2.0 - 1.0;   
+    //N = normalize(TBN * N);
     
     vec3 L = uLightDirection; 
     vec3 V = normalize(-vViewSpacePosition);
@@ -109,5 +109,5 @@ void main(){
     vec4 emissiveRougnessFromTexture = SRGBtoLINEAR(texture(uEmissiveTexture, vTexCoords));
     vec3 emissive = uEmissiveFactor * emissiveRougnessFromTexture.rgb;
 
-    fColor = vTangent;//N;//LINEARtoSRGB((f_diffuse + f_specular) * uLightIntensity * NdotL + emissive) ;
+    fColor = LINEARtoSRGB((f_diffuse + f_specular) * uLightIntensity * NdotL + emissive) ;
 }
