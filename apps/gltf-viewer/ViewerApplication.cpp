@@ -23,7 +23,7 @@
 
 ////////////////////////////////////////////////
 /// OpenGL project
-/// Ladjouli Rashid & Jarcet Eliot
+/// Ladjouzi Rachid & Jarcet Eliot
 ////////////////////////////////////////////////
 
 void keyCallback(
@@ -65,6 +65,24 @@ int ViewerApplication::run()
       glGetUniformLocation(glslProgram.glId(), "pointLight.quadratic");
   const auto uPointLightLinear =
       glGetUniformLocation(glslProgram.glId(), "pointLight.linear");
+
+  /** Spot light **/
+  const auto uSpotLightPosition =
+      glGetUniformLocation(glslProgram.glId(), "spotLight.position");
+  const auto uSpotLightDirection =
+      glGetUniformLocation(glslProgram.glId(), "spotLight.direction");
+  const auto uSpotLightColor =
+      glGetUniformLocation(glslProgram.glId(), "spotLight.color");
+  const auto uSpotLightCutOff =
+      glGetUniformLocation(glslProgram.glId(), "spotLight.cutOff");
+  const auto uSpotLightOuterCutOff =
+      glGetUniformLocation(glslProgram.glId(), "spotLight.outerCutOff");
+  const auto uSpotLightConstant =
+      glGetUniformLocation(glslProgram.glId(), "spotLight.constant");
+  const auto uSpotLightLinear =
+      glGetUniformLocation(glslProgram.glId(), "spotLight.linear");
+  const auto uSpotLightQuadratic =
+      glGetUniformLocation(glslProgram.glId(), "spotLight.quadratic");
 
   const auto uBaseColorTexture =
       glGetUniformLocation(glslProgram.glId(), "uBaseColorTexture");
@@ -140,6 +158,14 @@ int ViewerApplication::run()
   auto pointLightIntensity = glm::vec3(1.f);
   bool pointLightFromCamera = true;
   auto pointLightPosition = glm::vec3(-10.f, 5.f, 0.f);
+
+  /** Spot Light **/
+  auto spotLightIntensity = glm::vec3(1.f);
+  auto spotLightPosition = glm::vec3(0.f);
+  auto spotLightDirection = glm::vec3(0.f, 0.f, -1.f);
+  bool spotLightFromCamera = true;
+  float spotLightCutOff = 12.5f;
+  float spotLightOuterCutOff = 17.5f;
 
   const std::vector<GLuint> textureObjects = createTextureObjects(model);
   float white[] = {1, 1, 1, 1};
@@ -381,6 +407,7 @@ int ViewerApplication::run()
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     const auto viewMatrix = camera.getViewMatrix();
+
     /** Directionnal Light **/
     if (uLightDirection >= 0) {
       if (lightFromCamera)
@@ -394,7 +421,7 @@ int ViewerApplication::run()
       glUniform3fv(uLightIntensity, 1, glm::value_ptr(lightIntensity));
     }
 
-    /** point Light **/
+    /** Point Light **/
     if (uPointLightPosition >= 0) {
       if (pointLightFromCamera) {
         glUniform3fv(uPointLightPosition, 1,
@@ -406,6 +433,25 @@ int ViewerApplication::run()
         glUniform1f(uPointLightQuadratic, 0.032f);
       } else {
         glUniform3fv(uPointLightColor, 1, glm::value_ptr(glm::vec3(0, 0, 0)));
+      }
+    }
+
+    /** Spot Light **/
+    if (uSpotLightPosition >= 0) {
+      if (spotLightFromCamera) {
+        glUniform3fv(uSpotLightPosition, 1, glm::value_ptr(spotLightPosition));
+        glUniform3fv(
+            uSpotLightDirection, 1, glm::value_ptr(spotLightDirection));
+        glUniform3fv(uSpotLightColor, 1, glm::value_ptr(spotLightIntensity));
+        glUniform1f(uSpotLightCutOff, glm::cos(glm::radians(spotLightCutOff)));
+        glUniform1f(uSpotLightOuterCutOff,
+            glm::cos(glm::radians(spotLightOuterCutOff)));
+        glUniform1f(uSpotLightConstant, 1.0f);
+        glUniform1f(uSpotLightLinear, 0.09f);
+        glUniform1f(uSpotLightQuadratic, 0.032f);
+      } else {
+        glUniform3fv(uSpotLightColor, 1, glm::value_ptr(glm::vec3(0.f)));
+        glUniform1f(uSpotLightCutOff, glm::cos(glm::radians(0.f)));
       }
     }
 
@@ -590,6 +636,30 @@ int ViewerApplication::run()
           }
         }
         ImGui::Checkbox("PointLight from camera", &pointLightFromCamera);
+
+        /** Parameter of Spot Light **/
+        if (ImGui::CollapsingHeader(
+                "Spot Light", ImGuiTreeNodeFlags_DefaultOpen)) {
+          static auto spotLightColor = glm::vec3(1.f);
+          static float lightIntensityFactor = 1.f;
+
+          if (ImGui::SliderFloat("posSLX", &spotLightPosition.x, -10, 10.f) ||
+              ImGui::SliderFloat("posSLY", &spotLightPosition.y, -10, 10.f) ||
+              ImGui::SliderFloat("posSLZ", &spotLightPosition.z, -10, 10.f) ||
+              ImGui::SliderFloat("CutOff", &spotLightCutOff, 5.f, 15.f) ||
+              ImGui::SliderFloat(
+                  "OuterCutOff", &spotLightOuterCutOff, 15.f, 100.f)) {
+            ImGui::Text("Spot light Position -> %.3f %.3f %.3f",
+                spotLightPosition.x, spotLightPosition.y, spotLightPosition.z);
+          }
+          if (ImGui::SliderFloat(
+                  "spotIntensity", &lightIntensityFactor, 0, 10.f) ||
+              ImGui::ColorEdit3(
+                  "spotColor", reinterpret_cast<float *>(&spotLightColor))) {
+            spotLightIntensity = spotLightColor * lightIntensityFactor;
+          }
+        }
+        ImGui::Checkbox("Spot Light from camera", &spotLightFromCamera);
       }
       ImGui::End();
     }
