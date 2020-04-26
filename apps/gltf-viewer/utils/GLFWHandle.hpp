@@ -33,7 +33,7 @@ public:
     glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GL_TRUE);
     glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
     glfwWindowHint(GLFW_SAMPLES, 4);
-std::cout << GLFW_OPENGL_DEBUG_CONTEXT << std::endl;
+    std::cout << GLFW_OPENGL_DEBUG_CONTEXT << std::endl;
 
     m_pWindow =
         glfwCreateWindow(int(width), int(height), title, nullptr, nullptr);

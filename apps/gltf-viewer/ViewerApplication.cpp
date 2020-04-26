@@ -358,17 +358,24 @@ int ViewerApplication::run()
         glUniform1i(uMetallicRoughnessTexture, 1);
       }
 
+      if (uEmissiveFactor >= 0) {
+        glm::vec3 emissiveFact = glm::vec3(float(material.emissiveFactor[0]),
+            float(material.emissiveFactor[1]),
+            float(material.emissiveFactor[2]));
+        glUniform3fv(uEmissiveFactor, 1, glm::value_ptr(emissiveFact));
+      }
       if (uEmissiveTexture >= 0) {
-
-        auto textureObject = textureObjects[material.emissiveTexture.index];
+        GLuint textureObject = 0;
+        const auto EmissiveIndex = material.emissiveTexture.index;
+        if (EmissiveIndex >= 0) {
+          const tinygltf::Texture &texture = model.textures[EmissiveIndex];
+          if (texture.source >= 0) {
+            textureObject = textureObjects[texture.source];
+          }
+        }
         glActiveTexture(GL_TEXTURE2);
         glBindTexture(GL_TEXTURE_2D, textureObject);
         glUniform1i(uEmissiveTexture, 2);
-      }
-      if (uEmissiveFactor >= 0) {
-        auto emissiveFactor = material.emissiveFactor;
-        glUniform3f(uEmissiveFactor, (float)emissiveFactor[0],
-            (float)emissiveFactor[1], (float)emissiveFactor[2]);
       }
     } else {
       if (uBaseColorTexture >= 0) {
