@@ -333,7 +333,6 @@ int ViewerApplication::run()
             // vaoRange.count
             for (size_t primitiveIndice = 0;
                  primitiveIndice < mesh.primitives.size(); ++primitiveIndice) {
-
               const auto vao =
                   vertexArrayObjects[vaoRange.begin + primitiveIndice];
               const auto &primitive = mesh.primitives[primitiveIndice];
@@ -653,7 +652,6 @@ std::vector<GLuint> ViewerApplication::createVertexArrayObjects(
 
   GLsizei compteur = 0;
   for (const auto &mesh : model.meshes) {
-
     auto vaoOffset = GLsizei(vertexArrayObjects.size());
     meshIndexToVaoRange[compteur].begin = vaoOffset;
     auto numberOfPrimitives = GLsizei(mesh.primitives.size());
