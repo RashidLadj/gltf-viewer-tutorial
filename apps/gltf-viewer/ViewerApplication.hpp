@@ -71,13 +71,12 @@ private:
 
   template <typename T>
   void computeData(const tinygltf::Model &model, const std::string dataName,
-      std::vector<T> &container, const bool world = false);
+      std::vector<T> &container, const bool world = true);
 
   void computePos(const tinygltf::Model &model, std::vector<glm::vec3> &pos,
-      std::map<int, glm::vec3> &posMap);
-  void computeNormal(const tinygltf::Model &model,
-      std::vector<glm::vec3> &normal, std::map<int, glm::vec3> &posMap);
-  void computeTexCoord(const tinygltf::Model &model,
-      std::vector<glm::vec2> &texCoord0,
-      std::map<int, glm::vec2> &texCoord0Map);
+      bool world = true);
+  void computeNormal(
+      const tinygltf::Model &model, std::vector<glm::vec3> &normal);
+  void computeTexCoord(
+      const tinygltf::Model &model, std::vector<glm::vec2> &texCoord0);
 };

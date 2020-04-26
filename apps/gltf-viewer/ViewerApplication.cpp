@@ -40,8 +40,10 @@ int ViewerApplication::run()
       compileProgram({m_ShadersRootPath / m_AppName / m_vertexShader,
           m_ShadersRootPath / m_AppName / m_fragmentShader});
 
+  // NORMAL MAPPING //
   const auto modelMatrixLocation =
       glGetUniformLocation(glslProgram.glId(), "uModelMatrix");
+
   const auto modelViewProjMatrixLocation =
       glGetUniformLocation(glslProgram.glId(), "uModelViewProjMatrix");
   const auto modelViewMatrixLocation =
@@ -70,6 +72,8 @@ int ViewerApplication::run()
       glGetUniformLocation(glslProgram.glId(), "uEmissiveTexture");
 
   // NORMAL MAPPING //
+  const auto normalMappingLocation =
+      glGetUniformLocation(glslProgram.glId(), "uNormalMapping");
   const auto normalTextureLocation =
       glGetUniformLocation(glslProgram.glId(), "uNormalTexture");
 
@@ -84,36 +88,24 @@ int ViewerApplication::run()
   glm::vec3 bboxMin, bboxMax;
   computeSceneBounds(model, bboxMin, bboxMax);
 
-  // Diagonal vector ??
+  // Diagonal vector
   const auto diagVector = bboxMax - bboxMin;
 
   // NORMAL MAPPING
-  bool normalMapping = true;
+  bool normalMapping = false;
 
-  // Build projection matrix
-  // auto maxDistance = 500.f; // TODO use scene bounds instead to compute this
   float maxDistance =
       glm::length(diagVector) > 0 ? glm::length(diagVector) : 100.f;
   const auto projMatrix =
       glm::perspective(70.f, float(m_nWindowWidth) / m_nWindowHeight,
           0.001f * maxDistance, 1.5f * maxDistance);
 
-  // TODO Implement a new CameraController model and use it instead. Propose the
-  // choice from the GUI
-  // FirstPersonCameraController cameraController{m_GLFWHandle.window(), 2.f *
-  // maxDistance};
-  /** Replace FirstPersonCamera With TrackballCamera**/
-  // TrackballCameraController cameraController{m_GLFWHandle.window(), 2.f *
-  // maxDistance};
   std::unique_ptr<CameraControllerInterface> cameraController =
       std::make_unique<TrackballCameraController>(m_GLFWHandle.window());
 
   if (m_hasUserCamera) {
     cameraController->setCamera(m_userCamera);
   } else {
-    // TODO Use scene bounds to compute a better default camera
-    // cameraController.setCamera(Camera{glm::vec3(0, 0, 0), glm::vec3(0, 0,
-    // -1), glm::vec3(0, 1, 0)});
     const auto center = 0.5f * (bboxMax + bboxMin);
     const auto up = glm::vec3(0, 1, 0);
     // const auto eye = center + diag;
@@ -124,8 +116,18 @@ int ViewerApplication::run()
     cameraController->setCamera(Camera{eye, center, up});
   }
 
-  auto lightDirection = glm::vec3(1.f);
-  auto lightIntensity = glm::vec3(1.f);
+  static float theta = 0.72f;
+  static float phi = 2.6f;
+  float sinPhi = glm::sin(phi);
+  float cosPhi = glm::cos(phi);
+  float sinTheta = glm::sin(theta);
+  float cosTheta = glm::cos(theta);
+  auto lightDirection =
+      glm::vec3(sinTheta * cosPhi, cosTheta, sinTheta * sinPhi);
+
+  static float lightIntensityFactor = 3.f;
+  auto lightIntensity = glm::vec3(3.f);
+
   bool lightFromCamera = false;
 
   const std::vector<GLuint> textureObjects = createTextureObjects(model);
@@ -208,11 +210,16 @@ int ViewerApplication::run()
       }
 
       if (emissiveTextureLocation >= 0) {
-        auto textureObject = textureObjects[material.emissiveTexture.index];
+        GLuint textureObject = 0;
+        const auto emissiveIndex = material.emissiveTexture.index;
+        if (emissiveIndex >= 0) {
+          textureObject = textureObjects[emissiveIndex];
+        }
         glActiveTexture(GL_TEXTURE2);
         glBindTexture(GL_TEXTURE_2D, textureObject);
         glUniform1i(emissiveTextureLocation, 2);
       }
+
       if (emissiveFactorLocation >= 0) {
         auto emissiveFactor = material.emissiveFactor;
         glUniform3f(emissiveFactorLocation, (float)emissiveFactor[0],
@@ -220,12 +227,20 @@ int ViewerApplication::run()
       }
 
       // NORMAL MAPPING //
+      if (normalMappingLocation >= 0) {
+        glUniform1i(normalMappingLocation, (unsigned int)normalMapping);
+      }
       if (normalTextureLocation >= 0) {
-        auto textureObject = textureObjects[material.normalTexture.index];
+        GLuint textureObject = 0;
+        const auto normalIndex = material.normalTexture.index;
+        if (normalIndex >= 0) {
+          textureObject = textureObjects[normalIndex];
+        }
         glActiveTexture(GL_TEXTURE3);
         glBindTexture(GL_TEXTURE_2D, textureObject);
         glUniform1i(normalTextureLocation, 2);
       }
+
     } else {
       if (baseColorTextureLocation >= 0) {
         glActiveTexture(GL_TEXTURE0);
@@ -255,6 +270,10 @@ int ViewerApplication::run()
         glUniform3f(metallicFactorLocation, 0, 0, 0);
       }
 
+      // NORMAL MAPPING //
+      if (normalMappingLocation >= 0) {
+        glUniform1i(normalMappingLocation, (unsigned int)normalMapping);
+      }
       if (normalTextureLocation >= 0) {
         glActiveTexture(GL_TEXTURE3);
         glBindTexture(GL_TEXTURE_2D, whiteTexture);
@@ -418,21 +437,20 @@ int ViewerApplication::run()
         }
         /** Parameter of Light**/
         if (ImGui::CollapsingHeader("Light", ImGuiTreeNodeFlags_DefaultOpen)) {
-          static float theta = 0.f;
-          static float phi = 0.f;
+          theta = 0.72f;
+          phi = 2.6f;
 
           if (ImGui::SliderFloat("Theta", &theta, 0, glm::pi<float>()) ||
               ImGui::SliderFloat("Phi", &phi, 0, 2.f * glm::pi<float>())) {
-            const float sinPhi = glm::sin(phi);
-            const float cosPhi = glm::cos(phi);
-            const float sinTheta = glm::sin(theta);
-            const float cosTheta = glm::cos(theta);
+            sinPhi = glm::sin(phi);
+            cosPhi = glm::cos(phi);
+            sinTheta = glm::sin(theta);
+            cosTheta = glm::cos(theta);
             lightDirection =
                 glm::vec3(sinTheta * cosPhi, cosTheta, sinTheta * sinPhi);
           }
 
           static auto lightColor = glm::vec3(1.f);
-          static float lightIntensityFactor = 1.f;
 
           if (ImGui::SliderFloat("Intensity", &lightIntensityFactor, 0, 10.f) ||
               ImGui::ColorEdit3(
@@ -550,61 +568,30 @@ std::vector<GLuint> ViewerApplication::createBufferObjects(
     std::vector<float> buffer;
     std::vector<float> tangentBuffer;
 
-    std::vector<glm::vec3> pos;
-    std::map<int, glm::vec3> posMap;
-    std::vector<glm::vec3> normal;
-    std::map<int, glm::vec3> normalMap;
+    std::vector<glm::vec3> localPos;
     std::vector<glm::vec2> texCoord0;
-    std::map<int, glm::vec2> texCoord0Map;
 
-    computePos(model, pos, posMap);
-    auto it = posMap.begin();
-    for (int i = 0; i < 20; ++i) {
-      std::cout << it->first << " " << it->second << std::endl;
-      it++;
-    }
-    computeNormal(model, normal, normalMap);
-    computeTexCoord(model, texCoord0, texCoord0Map);
+    // Ma fonction template est deffectueuse, je ne l'utilise pas encore
+    // computeData<glm::vec3>(model, "POSITION", localPos, false);
 
-    std::cout << "pos vector size : " << pos.size() << std::endl;
-    std::cout << "pos map size " << posMap.size() << std::endl;
-    std::cout << "gltf buffer size : " << model.buffers[i].data.size()
-              << std::endl;
+    // 3e parametre de computePos indique si on calcule des coordonnées world
+    // (true) ou local (false)
+    computePos(model, localPos, false);
+
+    computeTexCoord(model, texCoord0);
 
     // Computing tangent and bitangent
     std::vector<glm::vec3> tangents;
     std::vector<glm::vec3> bitangents;
 
-    computeTangentAndBitangentCoordinates(tangents, bitangents, pos, texCoord0);
+    computeTangentAndBitangentCoordinates(
+        tangents, bitangents, localPos, texCoord0);
 
-    it = posMap.begin();
-    auto itN = normalMap.begin();
-    auto itT = texCoord0Map.begin();
-    for (int i = 0; i < posMap.size(); ++i) {
-      /*buffer.push_back(it->second.x);
-      buffer.push_back(it->second.y);
-      buffer.push_back(it->second.z);
-      buffer.push_back(itN->second.x);
-      buffer.push_back(itN->second.y);
-      buffer.push_back(itN->second.z);
-      buffer.push_back(itT->second.x);
-      buffer.push_back(itT->second.y);
-      it++;
-      itN++;
-      itT++;*/
-
-      buffer.push_back(pos[i].x);
-      buffer.push_back(pos[i].y);
-      buffer.push_back(pos[i].z);
-      buffer.push_back(normal[i].x);
-      buffer.push_back(normal[i].y);
-      buffer.push_back(normal[i].z);
-      buffer.push_back(texCoord0[i].x);
-      buffer.push_back(texCoord0[i].y);
-
+    for (int i = 0; i < tangents.size(); ++i) {
       tangentBuffer.push_back(tangents[i].x);
       tangentBuffer.push_back(tangents[i].y);
       tangentBuffer.push_back(tangents[i].z);
+
       // Now we use the property B = cross(N, T), we don't need to calculate
       // bitangent no more
       // tangentBuffer.push_back(bitangents[i].x);
@@ -621,13 +608,13 @@ std::vector<GLuint> ViewerApplication::createBufferObjects(
 
     glBindBuffer(GL_ARRAY_BUFFER, bufferObjects[i]);
     // NORMAL MAPPING//
-    if (normalMapping) {
-      glBufferData(
-          GL_ARRAY_BUFFER, buffer.size(), buffer.data(), GL_STATIC_DRAW);
-    } else {
-      glBufferData(GL_ARRAY_BUFFER, model.buffers[i].data.size(),
-          model.buffers[i].data.data(), GL_STATIC_DRAW);
-    }
+    // if (normalMapping) {
+    //  glBufferData(
+    //      GL_ARRAY_BUFFER, buffer.size(), buffer.data(), GL_STATIC_DRAW);
+    //} else {
+    glBufferData(GL_ARRAY_BUFFER, model.buffers[i].data.size(),
+        model.buffers[i].data.data(), GL_STATIC_DRAW);
+    //}
 
     // NORMAL MAPPING//
     // je bind un 2e vbo indexé après tous les autres vbo potentiels
@@ -733,24 +720,24 @@ std::vector<GLuint> ViewerApplication::createVertexArrayObjects(
 
             const auto byteOffset = accessor.byteOffset + bufferView.byteOffset;
 
-            if (!normalMapping) {
-              glVertexAttribPointer(vertexAttrib, accessor.type,
-                  accessor.componentType, GL_FALSE,
-                  GLsizei(bufferView.byteStride), (const GLvoid *)byteOffset);
-            }
+            // if (!normalMapping) {
+            glVertexAttribPointer(vertexAttrib, accessor.type,
+                accessor.componentType, GL_FALSE,
+                GLsizei(bufferView.byteStride), (const GLvoid *)byteOffset);
+            //}
           }
         }
 
         // /!\ le vbo a été bindé dans l'accolade precedente donc ça marche,
         // si refacto penser a rebinder
-        if (normalMapping) {
+        /*if (normalMapping) {
           glVertexAttribPointer(VERTEX_ATTRIB_POSITION_IDX, 3, GL_FLOAT,
               GL_FALSE, 8 * sizeof(float), (const GLvoid *)(0));
           glVertexAttribPointer(VERTEX_ATTRIB_NORMAL_IDX, 3, GL_FLOAT, GL_FALSE,
               8 * sizeof(float), (const GLvoid *)(3 * sizeof(float)));
           glVertexAttribPointer(VERTEX_ATTRIB_TEXCOORD0_IDX, 2, GL_FLOAT,
               GL_FALSE, 8 * sizeof(float), (const GLvoid *)(6 * sizeof(float)));
-        }
+        }*/
 
         ////////////////////////////////////////////////////////////////
         ///         NORMAL MAPPING          ////////////////////////////
@@ -760,11 +747,11 @@ std::vector<GLuint> ViewerApplication::createVertexArrayObjects(
         // present in
         // the primitive attributes description : Tangent & Bitangent
 
-        assert(tangentBufferObject);
+        // assert(tangentBufferObject);
         glBindBuffer(GL_ARRAY_BUFFER, tangentBufferObject);
-        std::cout << "binding vbo " << tangentBufferObject << std::endl;
+        // std::cout << "binding vbo " << tangentBufferObject << std::endl;
 
-        std::cout << "Telling vao how to manage tangent data" << std::endl;
+        // std::cout << "Telling vao how to manage tangent data" << std::endl;
         glEnableVertexAttribArray(VERTEX_ATTRIB_TANGENT_IDX);
 
         glVertexAttribPointer(VERTEX_ATTRIB_TANGENT_IDX, 3, GL_FLOAT, GL_FALSE,
@@ -803,7 +790,6 @@ std::vector<GLuint> ViewerApplication::createVertexArrayObjects(
     }
   }
   compteur++;
-
   // on debind le vao
   glBindVertexArray(0);
   return vertexArrayObjects;
@@ -976,20 +962,14 @@ void ViewerApplication::computeData(const tinygltf::Model &model,
                                   .data[indexByteOffset + indexByteStride * i]);
                     break;
                   }
-                  // here data is local
-                  /*
+
                   const T &dataLocal =
                       *((T *)&dataBuffer
                               .data[byteOffset + dataByteStride * index]);
-                  if (world) {
-                    if (dataName == "TEXCOORD0") {
-                      std::cerr << "You try to get world coordinates for "
-                                   "texture data !"
-                                << std::endl;
-                    }
+                  if (dataName != "TEXCOORD0") {
                     const T &dataWorld =
                         T(modelMatrix * glm::vec4(dataLocal, 1.f));
-                    container.push_back(dataWorld);
+                    container.push_back(world ? dataWorld : dataLocal);
                   } else {
                     container.push_back(dataLocal);
                   }
@@ -997,35 +977,14 @@ void ViewerApplication::computeData(const tinygltf::Model &model,
               } else {
                 for (size_t i = 0; i < dataAccessor.count; ++i) {
                   const T &dataLocal =
-                      *((T *)&dataBuffer.data[byteOffset + dataByteStride *
-              i]); if (world) { if (dataName == "TEXCOORD0") { std::cerr <<
-              "You try to get world coordinates for " "texture data !"
-                                << std::endl;
-                    }
+                      *((T *)&dataBuffer.data[byteOffset + dataByteStride * i]);
+                  if (dataName != "TEXCOORD0") {
                     const T &dataWorld =
                         T(modelMatrix * glm::vec4(dataLocal, 1.f));
-                    container.push_back(dataWorld);
+                    container.push_back(world ? dataWorld : dataLocal);
                   } else {
                     container.push_back(dataLocal);
                   }
-                  */
-                  const auto &localPosition =
-                      *((const glm::vec3 *)&dataBuffer
-                              .data[byteOffset + dataByteStride * index]);
-                  const auto worldPosition =
-                      glm::vec3(modelMatrix * glm::vec4(localPosition, 1.f));
-
-                  container.push_back(worldPosition);
-                }
-              } else {
-                for (size_t i = 0; i < dataAccessor.count; ++i) {
-                  const auto &localPosition =
-                      *((const glm::vec3 *)&dataBuffer
-                              .data[byteOffset + dataByteStride * i]);
-                  const auto worldPosition =
-                      glm::vec3(modelMatrix * glm::vec4(localPosition, 1.f));
-
-                  container.push_back(worldPosition);
                 }
               }
             }
@@ -1040,11 +999,10 @@ void ViewerApplication::computeData(const tinygltf::Model &model,
   }
 }
 
-void ViewerApplication::computePos(const tinygltf::Model &model,
-    std::vector<glm::vec3> &pos, std::map<int, glm::vec3> &posMap)
+void ViewerApplication::computePos(
+    const tinygltf::Model &model, std::vector<glm::vec3> &pos, bool world)
 {
   if (model.defaultScene >= 0) {
-    auto it = posMap.begin();
     const std::function<void(int, const glm::mat4 &)> addPos =
         [&](int nodeIdx, const glm::mat4 &parentMatrix) {
           const auto &node = model.nodes[nodeIdx];
@@ -1124,18 +1082,13 @@ void ViewerApplication::computePos(const tinygltf::Model &model,
                     break;
                   }
 
-                  if (i < 10) {
-                    std::cout << "indexaccessor : " << index << std::endl;
-                  }
                   const auto &localPosition =
                       *((const glm::vec3 *)&positionBuffer
                               .data[byteOffset + positionByteStride * index]);
                   const auto worldPosition =
                       glm::vec3(modelMatrix * glm::vec4(localPosition, 1.f));
 
-                  posMap.insert(
-                      it, std::pair<int, glm::vec3>(index, worldPosition));
-                  pos.push_back(worldPosition);
+                  pos.push_back(world ? worldPosition : localPosition);
                 }
               } else {
                 for (size_t i = 0; i < positionAccessor.count; ++i) {
@@ -1145,9 +1098,7 @@ void ViewerApplication::computePos(const tinygltf::Model &model,
                   const auto worldPosition =
                       glm::vec3(modelMatrix * glm::vec4(localPosition, 1.f));
 
-                  posMap.insert(
-                      it, std::pair<int, glm::vec3>(i, worldPosition));
-                  pos.push_back(worldPosition);
+                  pos.push_back(world ? worldPosition : localPosition);
                 }
               }
             }
@@ -1162,129 +1113,10 @@ void ViewerApplication::computePos(const tinygltf::Model &model,
   }
 }
 
-void ViewerApplication::computeNormal(const tinygltf::Model &model,
-    std::vector<glm::vec3> &pos, std::map<int, glm::vec3> &posMap)
+void ViewerApplication::computeTexCoord(
+    const tinygltf::Model &model, std::vector<glm::vec2> &texCoord0)
 {
   if (model.defaultScene >= 0) {
-    auto it = posMap.begin();
-    const std::function<void(int, const glm::mat4 &)> addPos =
-        [&](int nodeIdx, const glm::mat4 &parentMatrix) {
-          const auto &node = model.nodes[nodeIdx];
-          const glm::mat4 modelMatrix =
-              getLocalToWorldMatrix(node, parentMatrix);
-          if (node.mesh >= 0) {
-            const auto &mesh = model.meshes[node.mesh];
-            for (size_t pIdx = 0; pIdx < mesh.primitives.size(); ++pIdx) {
-
-              const auto &primitive = mesh.primitives[pIdx];
-              const auto positionAttrIdxIt =
-                  primitive.attributes.find("NORMAL");
-              if (positionAttrIdxIt == end(primitive.attributes)) {
-                continue;
-              }
-              const auto &positionAccessor =
-                  model.accessors[(*positionAttrIdxIt).second];
-              if (positionAccessor.type != 3) {
-                std::cerr << "Position accessor with type != VEC3, skipping"
-                          << std::endl;
-                continue;
-              }
-              const auto &positionBufferView =
-                  model.bufferViews[positionAccessor.bufferView];
-              const auto byteOffset =
-                  positionAccessor.byteOffset + positionBufferView.byteOffset;
-              const auto &positionBuffer =
-                  model.buffers[positionBufferView.buffer];
-              const auto positionByteStride =
-                  positionBufferView.byteStride ? positionBufferView.byteStride
-                                                : 3 * sizeof(float);
-
-              if (primitive.indices >= 0) {
-                const auto &indexAccessor = model.accessors[primitive.indices];
-                const auto &indexBufferView =
-                    model.bufferViews[indexAccessor.bufferView];
-                const auto indexByteOffset =
-                    indexAccessor.byteOffset + indexBufferView.byteOffset;
-                const auto &indexBuffer = model.buffers[indexBufferView.buffer];
-                auto indexByteStride = indexBufferView.byteStride;
-
-                switch (indexAccessor.componentType) {
-                default:
-                  std::cerr
-                      << "Primitive index accessor with bad componentType "
-                      << indexAccessor.componentType << ", skipping it."
-                      << std::endl;
-                  continue;
-                case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
-                  indexByteStride =
-                      indexByteStride ? indexByteStride : sizeof(uint8_t);
-                  break;
-                case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
-                  indexByteStride =
-                      indexByteStride ? indexByteStride : sizeof(uint16_t);
-                  break;
-                case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
-                  indexByteStride =
-                      indexByteStride ? indexByteStride : sizeof(uint32_t);
-                  break;
-                }
-
-                for (size_t i = 0; i < indexAccessor.count; ++i) {
-                  uint32_t index = 0;
-                  switch (indexAccessor.componentType) {
-                  case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
-                    index = *((const uint8_t *)&indexBuffer
-                                  .data[indexByteOffset + indexByteStride * i]);
-                    break;
-                  case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
-                    index = *((const uint16_t *)&indexBuffer
-                                  .data[indexByteOffset + indexByteStride * i]);
-                    break;
-                  case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
-                    index = *((const uint32_t *)&indexBuffer
-                                  .data[indexByteOffset + indexByteStride * i]);
-                    break;
-                  }
-                  const auto &localPosition =
-                      *((const glm::vec3 *)&positionBuffer
-                              .data[byteOffset + positionByteStride * index]);
-                  const auto worldPosition =
-                      glm::vec3(modelMatrix * glm::vec4(localPosition, 1.f));
-
-                  posMap.insert(
-                      it, std::pair<int, glm::vec3>(index, worldPosition));
-                  pos.push_back(worldPosition);
-                }
-              } else {
-                for (size_t i = 0; i < positionAccessor.count; ++i) {
-                  const auto &localPosition =
-                      *((const glm::vec3 *)&positionBuffer
-                              .data[byteOffset + positionByteStride * i]);
-                  const auto worldPosition =
-                      glm::vec3(modelMatrix * glm::vec4(localPosition, 1.f));
-
-                  posMap.insert(
-                      it, std::pair<int, glm::vec3>(i, worldPosition));
-                  pos.push_back(worldPosition);
-                }
-              }
-            }
-          }
-          for (const auto childNodeIdx : node.children) {
-            addPos(childNodeIdx, modelMatrix);
-          }
-        };
-    for (const auto nodeIdx : model.scenes[model.defaultScene].nodes) {
-      addPos(nodeIdx, glm::mat4(1));
-    }
-  }
-}
-
-void ViewerApplication::computeTexCoord(const tinygltf::Model &model,
-    std::vector<glm::vec2> &texCoord0, std::map<int, glm::vec2> &texCoord0Map)
-{
-  if (model.defaultScene >= 0) {
-    auto it = texCoord0Map.begin();
     const std::function<void(int, const glm::mat4 &)> addTexCoord =
         [&](int nodeIdx, const glm::mat4 &parentMatrix) {
           const auto &node = model.nodes[nodeIdx];
@@ -1364,16 +1196,9 @@ void ViewerApplication::computeTexCoord(const tinygltf::Model &model,
                     break;
                   }
 
-                  // ICI VEC2 PAS VEC3; FAUT IL FAIRE WORLD OU LOCAL COORD ?
                   const auto &localTexCoord =
                       *((const glm::vec2 *)&texCoordBuffer
                               .data[byteOffset + texCoordByteStride * index]);
-                  /*const auto worldTexCoord =
-                      glm::vec2(modelMatrix * glm::vec4(localTexCoord,
-                     0, 1.f));
-                  */
-                  texCoord0Map.insert(
-                      it, std::pair<int, glm::vec2>(index, localTexCoord));
                   texCoord0.push_back(localTexCoord);
                 }
               } else {
@@ -1381,12 +1206,6 @@ void ViewerApplication::computeTexCoord(const tinygltf::Model &model,
                   const auto &localTexCoord =
                       *((const glm::vec2 *)&texCoordBuffer
                               .data[byteOffset + texCoordByteStride * i]);
-                  /*const auto worldTexCoord =
-                      glm::vec2(modelMatrix *
-                     glm::vec4(localTexCoord, 1.f));
-                  */
-                  texCoord0Map.insert(
-                      it, std::pair<int, glm::vec2>(i, localTexCoord));
                   texCoord0.push_back(localTexCoord);
                 }
               }

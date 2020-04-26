@@ -20,6 +20,7 @@ uniform sampler2D uMetallicRoughnessTexture;
 uniform vec3 uEmissiveFactor; 
 uniform sampler2D uEmissiveTexture;
 
+uniform int uNormalMapping;
 uniform sampler2D uNormalTexture;
 
 out vec3 fColor;
@@ -50,12 +51,13 @@ vec4 SRGBtoLINEAR(vec4 srgbIn){
 }
 
 void main(){
-    vec3 N = normalize(vViewSpaceNormal);
-
+  vec3 N = normalize(vViewSpaceNormal);
+  if (uNormalMapping > 0){
     //NORMAL MAPPING//
-    //vec3 N = texture(uNormalTexture, vTexCoords).rgb;
-    //N = N * 2.0 - 1.0;   
-    //N = normalize(TBN * N);
+    N = texture(uNormalTexture, vTexCoords).rgb;
+    N = N * 2.0 - 1.0;   
+    N = normalize(TBN * N);
+  }
     
     vec3 L = uLightDirection; 
     vec3 V = normalize(-vViewSpacePosition);
