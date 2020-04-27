@@ -52,6 +52,7 @@ void computeSceneBounds(
           if (node.mesh >= 0) {
             const auto &mesh = model.meshes[node.mesh];
             for (size_t pIdx = 0; pIdx < mesh.primitives.size(); ++pIdx) {
+
               const auto &primitive = mesh.primitives[pIdx];
               const auto positionAttrIdxIt =
                   primitive.attributes.find("POSITION");
@@ -126,6 +127,7 @@ void computeSceneBounds(
                               .data[byteOffset + positionByteStride * index]);
                   const auto worldPosition =
                       glm::vec3(modelMatrix * glm::vec4(localPosition, 1.f));
+
                   bboxMin = glm::min(bboxMin, worldPosition);
                   bboxMax = glm::max(bboxMax, worldPosition);
                 }
@@ -136,6 +138,7 @@ void computeSceneBounds(
                               .data[byteOffset + positionByteStride * i]);
                   const auto worldPosition =
                       glm::vec3(modelMatrix * glm::vec4(localPosition, 1.f));
+
                   bboxMin = glm::min(bboxMin, worldPosition);
                   bboxMax = glm::max(bboxMax, worldPosition);
                 }
