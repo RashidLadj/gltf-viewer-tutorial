@@ -1,5 +1,7 @@
 #version 330
 
+#define NB_POINTS_LIGHTS 3
+
 /** Directional Light **/
 struct directionalLight{
   vec3 uLightDirection;
@@ -15,7 +17,7 @@ struct PointLight {
     float linear;
     float quadratic;  
 };
-uniform PointLight pointLight;
+uniform PointLight pointLight[NB_POINTS_LIGHTS];
 
 /** Spot light **/
 struct SpotLight {    
@@ -129,7 +131,7 @@ vec3 directionalLightValue() {
       (f_diffuse + f_specular) * dirLight.uLightIntensity * NdotL + emissive);
 }
 
-vec3 pointLightValue() {
+vec3 pointLightValue(PointLight pointLight) {
 	vec3 N = normalize(vViewSpaceNormal);
   /** lightDir **/
   vec3 L = normalize(pointLight.position - vViewSpacePosition);
@@ -263,19 +265,20 @@ vec3 spotLightValue() {
 
   vec3 color = LINEARtoSRGB(
        (f_diffuse + f_specular) * spotLight.color * NdotL + emissive);
-
-  if(theta > spotLight.cutOff) 
-  {       
-    return color;
-  }
-  else  // else, use ambient light so scene isn't completely dark outside the spotlight.
-    return LINEARtoSRGB(emissive);
+return color;
+  // if(theta > spotLight.cutOff) 
+  // {       
+  //   return color;
+  // }
+  // else  // else, use ambient light so scene isn't completely dark outside the spotlight.
+  //   return LINEARtoSRGB(emissive);
 }
 
 void main()
 {
   fColor = vec3(0.f);
   fColor += directionalLightValue();
-  fColor += pointLightValue();
+  for(int i = 0 ; i < NB_POINTS_LIGHTS; ++i)
+    fColor += pointLightValue(pointLight[i]);
   fColor += spotLightValue();
 }

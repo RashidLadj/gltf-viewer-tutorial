@@ -21,6 +21,8 @@
 #include "utils/gltf.hpp"
 #include "utils/images.hpp"
 
+#define NB_POINTS_LIGHTS 3
+
 ////////////////////////////////////////////////
 /// OpenGL project
 /// Ladjouzi Rachid & Jarcet Eliot
@@ -55,16 +57,43 @@ int ViewerApplication::run()
       glGetUniformLocation(glslProgram.glId(), "dirLight.uLightIntensity");
 
   /** Point light **/
-  const auto uPointLightPosition =
-      glGetUniformLocation(glslProgram.glId(), "pointLight.position");
-  const auto uPointLightColor =
-      glGetUniformLocation(glslProgram.glId(), "pointLight.color");
-  const auto uPointLightConstant =
-      glGetUniformLocation(glslProgram.glId(), "pointLight.constant");
-  const auto uPointLightQuadratic =
-      glGetUniformLocation(glslProgram.glId(), "pointLight.quadratic");
-  const auto uPointLightLinear =
-      glGetUniformLocation(glslProgram.glId(), "pointLight.linear");
+  GLint uPointLightPosition[NB_POINTS_LIGHTS];
+  GLint uPointLightColor[NB_POINTS_LIGHTS];
+  GLint uPointLightConstant[NB_POINTS_LIGHTS];
+  GLint uPointLightQuadratic[NB_POINTS_LIGHTS];
+  GLint uPointLightLinear[NB_POINTS_LIGHTS];
+  std::string position;
+  std::string color;
+  std::string constant;
+  std::string quadratic;
+  std::string linear;
+
+  for (int i = 0; i < NB_POINTS_LIGHTS; ++i) {
+    position = "pointLight[" + std::to_string(i) + "].position";
+    color = "pointLight[" + std::to_string(i) + "].color";
+    constant = "pointLight[" + std::to_string(i) + "].constant";
+    quadratic = "pointLight[" + std::to_string(i) + "].quadratic";
+    linear = "pointLight[" + std::to_string(i) + "].linear";
+
+    uPointLightPosition[i] =
+        glGetUniformLocation(glslProgram.glId(), position.c_str());
+    uPointLightColor[i] =
+        glGetUniformLocation(glslProgram.glId(), color.c_str());
+    uPointLightConstant[i] =
+        glGetUniformLocation(glslProgram.glId(), constant.c_str());
+    uPointLightQuadratic[i] =
+        glGetUniformLocation(glslProgram.glId(), quadratic.c_str());
+    uPointLightLinear[i] =
+        glGetUniformLocation(glslProgram.glId(), linear.c_str());
+  }
+  // const auto uPointLightColor =
+  //     glGetUniformLocation(glslProgram.glId(), "pointLight[0].color");
+  // const auto uPointLightConstant =
+  //     glGetUniformLocation(glslProgram.glId(), "pointLight[0].constant");
+  // const auto uPointLightQuadratic =
+  //     glGetUniformLocation(glslProgram.glId(), "pointLight[0].quadratic");
+  // const auto uPointLightLinear =
+  //     glGetUniformLocation(glslProgram.glId(), "pointLight[0].linear");
 
   /** Spot light **/
   const auto uSpotLightPosition =
@@ -154,16 +183,19 @@ int ViewerApplication::run()
   auto lightIntensity = glm::vec3(1.f);
   bool lightFromCamera = false;
 
-  /** Point Light **/
-  auto pointLightIntensity = glm::vec3(1.f);
-  bool pointLightFromCamera = true;
-  auto pointLightPosition = glm::vec3(-10.f, 5.f, 0.f);
+  /** Points Lights **/
+  glm::vec3 pointLightIntensity[NB_POINTS_LIGHTS] = {
+      glm::vec3(1.f), glm::vec3(1.f, 0.f, 0.f), glm::vec3(0.f, 1.f, 0.f)};
+  bool enablePointLight = true;
+  bool enablePointLightAdditionnal = true;
+  glm::vec3 pointLightPosition[NB_POINTS_LIGHTS] = {glm::vec3(-10.f, 5.f, 0.f),
+      glm::vec3(10.f, 5.f, 0.f), glm::vec3(0.f, 5.f, 0.f)};
 
   /** Spot Light **/
   auto spotLightIntensity = glm::vec3(1.f);
   auto spotLightPosition = glm::vec3(0.f);
   auto spotLightDirection = glm::vec3(0.f, 0.f, -1.f);
-  bool spotLightFromCamera = true;
+  bool enableSpotLight = true;
   float spotLightCutOff = 12.5f;
   float spotLightOuterCutOff = 12.5f;
 
@@ -358,17 +390,24 @@ int ViewerApplication::run()
         glUniform1i(uMetallicRoughnessTexture, 1);
       }
 
+      if (uEmissiveFactor >= 0) {
+        glm::vec3 emissiveFact = glm::vec3(float(material.emissiveFactor[0]),
+            float(material.emissiveFactor[1]),
+            float(material.emissiveFactor[2]));
+        glUniform3fv(uEmissiveFactor, 1, glm::value_ptr(emissiveFact));
+      }
       if (uEmissiveTexture >= 0) {
-
-        auto textureObject = textureObjects[material.emissiveTexture.index];
+        GLuint textureObject = 0;
+        const auto EmissiveIndex = material.emissiveTexture.index;
+        if (EmissiveIndex >= 0) {
+          const tinygltf::Texture &texture = model.textures[EmissiveIndex];
+          if (texture.source >= 0) {
+            textureObject = textureObjects[texture.source];
+          }
+        }
         glActiveTexture(GL_TEXTURE2);
         glBindTexture(GL_TEXTURE_2D, textureObject);
         glUniform1i(uEmissiveTexture, 2);
-      }
-      if (uEmissiveFactor >= 0) {
-        auto emissiveFactor = material.emissiveFactor;
-        glUniform3f(uEmissiveFactor, (float)emissiveFactor[0],
-            (float)emissiveFactor[1], (float)emissiveFactor[2]);
       }
     } else {
       if (uBaseColorTexture >= 0) {
@@ -422,23 +461,28 @@ int ViewerApplication::run()
     }
 
     /** Point Light **/
-    if (uPointLightPosition >= 0) {
-      if (pointLightFromCamera) {
-        glUniform3fv(uPointLightPosition, 1,
-            glm::value_ptr(glm::normalize(
-                glm::vec3(viewMatrix * glm::vec4(pointLightPosition, 1.)))));
-        glUniform3fv(uPointLightColor, 1, glm::value_ptr(pointLightIntensity));
-        glUniform1f(uPointLightConstant, 1.0f);
-        glUniform1f(uPointLightLinear, 0.09f);
-        glUniform1f(uPointLightQuadratic, 0.032f);
-      } else {
-        glUniform3fv(uPointLightColor, 1, glm::value_ptr(glm::vec3(0, 0, 0)));
+    for (int i = 0; i < NB_POINTS_LIGHTS; ++i) {
+      if (uPointLightPosition[i] >= 0) {
+        if ((i == 0 && enablePointLight) ||
+            (i > 0 && enablePointLightAdditionnal)) {
+          glUniform3fv(uPointLightPosition[i], 1,
+              glm::value_ptr(glm::normalize(glm::vec3(
+                  viewMatrix * glm::vec4(pointLightPosition[i], 1.)))));
+          glUniform3fv(
+              uPointLightColor[i], 1, glm::value_ptr(pointLightIntensity[i]));
+          glUniform1f(uPointLightConstant[i], 1.0f);
+          glUniform1f(uPointLightLinear[i], 0.09f);
+          glUniform1f(uPointLightQuadratic[i], 0.032f);
+        } else {
+          glUniform3fv(
+              uPointLightColor[i], 1, glm::value_ptr(glm::vec3(0, 0, 0)));
+        }
       }
     }
 
     /** Spot Light **/
     if (uSpotLightPosition >= 0) {
-      if (spotLightFromCamera) {
+      if (enableSpotLight) {
         glUniform3fv(uSpotLightPosition, 1, glm::value_ptr(spotLightPosition));
         glUniform3fv(
             uSpotLightDirection, 1, glm::value_ptr(spotLightDirection));
@@ -622,20 +666,24 @@ int ViewerApplication::run()
                 "Point Light", ImGuiTreeNodeFlags_DefaultOpen)) {
           static auto pointLightColor = glm::vec3(1.f);
           static float lightIntensityFactor = 1.f;
-          if (ImGui::SliderFloat("posX", &pointLightPosition.x, -10, 10.f) ||
-              ImGui::SliderFloat("posY", &pointLightPosition.y, -10, 10.f) ||
-              ImGui::SliderFloat("posZ", &pointLightPosition.z, -10, 10.f)) {
-            ImGui::Text("Point light -> %.3f %.3f %.3f", pointLightPosition.x,
-                pointLightPosition.y, pointLightPosition.z);
+          if (ImGui::SliderFloat("posX", &pointLightPosition[0].x, -10, 10.f) ||
+              ImGui::SliderFloat("posY", &pointLightPosition[0].y, -10, 10.f) ||
+              ImGui::SliderFloat("posZ", &pointLightPosition[0].z, -10, 10.f)) {
+            ImGui::Text("Point light -> %.3f %.3f %.3f",
+                pointLightPosition[0].x, pointLightPosition[0].y,
+                pointLightPosition[0].z);
           }
           if (ImGui::SliderFloat(
                   "pointIntensity", &lightIntensityFactor, 0, 10.f) ||
               ImGui::ColorEdit3(
                   "pointColor", reinterpret_cast<float *>(&pointLightColor))) {
-            pointLightIntensity = pointLightColor * lightIntensityFactor;
+            pointLightIntensity[0] = pointLightColor * lightIntensityFactor;
           }
         }
-        ImGui::Checkbox("PointLight from camera", &pointLightFromCamera);
+        ImGui::Checkbox(
+            "enable/Disable Principal Point Light ", &enablePointLight);
+        ImGui::Checkbox("enable/Disable Additionnal Points Lights (2 lights) ",
+            &enablePointLightAdditionnal);
 
         /** Parameter of Spot Light **/
         if (ImGui::CollapsingHeader(
@@ -646,9 +694,10 @@ int ViewerApplication::run()
           if (ImGui::SliderFloat("posSLX", &spotLightPosition.x, -10, 10.f) ||
               ImGui::SliderFloat("posSLY", &spotLightPosition.y, -10, 10.f) ||
               ImGui::SliderFloat("posSLZ", &spotLightPosition.z, -10, 10.f) ||
-              ImGui::SliderFloat("CutOff", &spotLightCutOff, 5.f, 15.f) ||
               ImGui::SliderFloat(
-                  "OuterCutOff", &spotLightOuterCutOff, -12.5f, 12.5f)) {
+                  "CutOff", &spotLightCutOff, 0.f, spotLightOuterCutOff) ||
+              ImGui::SliderFloat("OuterCutOff", &spotLightOuterCutOff,
+                  spotLightCutOff, 20.f)) {
             ImGui::Text("Spot light Position -> %.3f %.3f %.3f",
                 spotLightPosition.x, spotLightPosition.y, spotLightPosition.z);
           }
@@ -659,7 +708,7 @@ int ViewerApplication::run()
             spotLightIntensity = spotLightColor * lightIntensityFactor;
           }
         }
-        ImGui::Checkbox("Spot Light from camera", &spotLightFromCamera);
+        ImGui::Checkbox("enable/Disable Spot Light", &enableSpotLight);
       }
       ImGui::End();
     }
