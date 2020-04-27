@@ -13,7 +13,6 @@ out mat3 TBN;
 
 out vec3 vTangent;
 
-
 uniform mat4 uModelMatrix;
 uniform mat4 uModelViewProjMatrix;
 uniform mat4 uModelViewMatrix;
