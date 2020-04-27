@@ -22,8 +22,8 @@ uniform mat4 uNormalMatrix;
 void main()
 {
     vViewSpacePosition = vec3(uModelViewMatrix * vec4(aPosition, 1.0));
-	vViewSpaceNormal = normalize(vec3(uNormalMatrix * vec4(aNormal, 0.0)));
-	vTexCoords = aTexCoords;
+	  vViewSpaceNormal = normalize(vec3(uNormalMatrix * vec4(aNormal, 0.0)));
+	  vTexCoords = aTexCoords;
 
     // On multiplie par la modelMatrix car on veut uniquement leur orientation dans le "tangent space",
     //si on voulait aussi leur directino il faudrait multiplier en plus par la normal matrix

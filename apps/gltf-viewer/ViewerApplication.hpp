@@ -24,6 +24,15 @@ private:
     GLsizei count; // Number of elements in range
   };
 
+  struct Light
+  {
+    // vec3 position; // No longer necessery when using directional lights.
+    glm::vec3 direction;
+    glm::vec3 ambient;
+    glm::vec3 diffuse;
+    glm::vec3 specular;
+  };
+
   GLsizei m_nWindowWidth = 1280;
   GLsizei m_nWindowHeight = 720;
 

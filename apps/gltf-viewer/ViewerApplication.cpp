@@ -1,3 +1,4 @@
+/** Branch Many Lights Test **/
 #include "ViewerApplication.hpp"
 
 #include <iostream>
@@ -20,9 +21,11 @@
 #include "utils/gltf.hpp"
 #include "utils/images.hpp"
 
+#define NB_POINTS_LIGHTS 3
+
 ////////////////////////////////////////////////
 /// OpenGL project
-/// Ladjouli Rashid & Jarcet Eliot
+/// Ladjouzi Rachid & Jarcet Eliot
 ////////////////////////////////////////////////
 
 void keyCallback(
@@ -50,10 +53,62 @@ int ViewerApplication::run()
       glGetUniformLocation(glslProgram.glId(), "uModelViewMatrix");
   const auto normalMatrixLocation =
       glGetUniformLocation(glslProgram.glId(), "uNormalMatrix");
+
+  /** Directional Light **/
   const auto lightDirectionLocation =
-      glGetUniformLocation(glslProgram.glId(), "uLightDirection");
+      glGetUniformLocation(glslProgram.glId(), "dirLight.uLightDirection");
   const auto lightIntensityLocation =
-      glGetUniformLocation(glslProgram.glId(), "uLightIntensity");
+      glGetUniformLocation(glslProgram.glId(), "dirLight.uLightIntensity");
+
+  /** Point light **/
+  GLint pointLightPositionLocation[NB_POINTS_LIGHTS];
+  GLint pointLightColorLocation[NB_POINTS_LIGHTS];
+  GLint pointLightConstantLocation[NB_POINTS_LIGHTS];
+  GLint pointLightQuadraticLocation[NB_POINTS_LIGHTS];
+  GLint pointLightLinearLocation[NB_POINTS_LIGHTS];
+  std::string position;
+  std::string color;
+  std::string constant;
+  std::string quadratic;
+  std::string linear;
+
+  for (int i = 0; i < NB_POINTS_LIGHTS; ++i) {
+    position = "pointLight[" + std::to_string(i) + "].position";
+    color = "pointLight[" + std::to_string(i) + "].color";
+    constant = "pointLight[" + std::to_string(i) + "].constant";
+    quadratic = "pointLight[" + std::to_string(i) + "].quadratic";
+    linear = "pointLight[" + std::to_string(i) + "].linear";
+
+    pointLightPositionLocation[i] =
+        glGetUniformLocation(glslProgram.glId(), position.c_str());
+    pointLightColorLocation[i] =
+        glGetUniformLocation(glslProgram.glId(), color.c_str());
+    pointLightConstantLocation[i] =
+        glGetUniformLocation(glslProgram.glId(), constant.c_str());
+    pointLightQuadraticLocation[i] =
+        glGetUniformLocation(glslProgram.glId(), quadratic.c_str());
+    pointLightLinearLocation[i] =
+        glGetUniformLocation(glslProgram.glId(), linear.c_str());
+  }
+
+  /** Spot light **/
+  const auto spotLightPositionLocation =
+      glGetUniformLocation(glslProgram.glId(), "spotLight.position");
+  const auto spotLightDirectionLocation =
+      glGetUniformLocation(glslProgram.glId(), "spotLight.direction");
+  const auto spotLightColorLocation =
+      glGetUniformLocation(glslProgram.glId(), "spotLight.color");
+  const auto spotLightCutOffLocation =
+      glGetUniformLocation(glslProgram.glId(), "spotLight.cutOff");
+  const auto spotLightOuterCutOffLocation =
+      glGetUniformLocation(glslProgram.glId(), "spotLight.outerCutOff");
+  const auto spotLightConstantLocation =
+      glGetUniformLocation(glslProgram.glId(), "spotLight.constant");
+  const auto spotLightLinearLocation =
+      glGetUniformLocation(glslProgram.glId(), "spotLight.linear");
+  const auto spotLightQuadraticLocation =
+      glGetUniformLocation(glslProgram.glId(), "spotLight.quadratic");
+
   const auto baseColorTextureLocation =
       glGetUniformLocation(glslProgram.glId(), "uBaseColorTexture");
   const auto baseColorFactorLocation =
@@ -116,6 +171,7 @@ int ViewerApplication::run()
     cameraController->setCamera(Camera{eye, center, up});
   }
 
+  /** Directionnal light parameters **/
   static float theta = 0.72f;
   static float phi = 2.6f;
   float sinPhi = glm::sin(phi);
@@ -129,6 +185,22 @@ int ViewerApplication::run()
   auto lightIntensity = glm::vec3(3.f);
 
   bool lightFromCamera = false;
+
+  /** Points Lights **/
+  glm::vec3 pointLightIntensity[NB_POINTS_LIGHTS] = {
+      glm::vec3(1.f), glm::vec3(1.f, 0.f, 0.f), glm::vec3(0.f, 1.f, 0.f)};
+  bool enablePointLight = true;
+  bool enablePointLightAdditionnal = true;
+  glm::vec3 pointLightPosition[NB_POINTS_LIGHTS] = {glm::vec3(-10.f, 5.f, 0.f),
+      glm::vec3(10.f, 5.f, 0.f), glm::vec3(0.f, 5.f, 0.f)};
+
+  /** Spot Light **/
+  auto spotLightIntensity = glm::vec3(1.f);
+  auto spotLightPosition = glm::vec3(0.f);
+  auto spotLightDirection = glm::vec3(0.f, 0.f, -1.f);
+  bool enableSpotLight = true;
+  float spotLightCutOff = 12.5f;
+  float spotLightOuterCutOff = 12.5f;
 
   const std::vector<GLuint> textureObjects = createTextureObjects(model);
   float white[] = {1, 1, 1, 1};
@@ -155,6 +227,7 @@ int ViewerApplication::run()
   glEnable(GL_DEPTH_TEST);
   glslProgram.use();
 
+  /** Binding gltf model materials **/
   const auto bindMaterial = [&](const auto materialIndex) {
     if (materialIndex >= 0) {
       // only valid is materialIndex >= 0
@@ -289,6 +362,9 @@ int ViewerApplication::run()
 
     const auto viewMatrix = camera.getViewMatrix();
 
+    /** Binding Lights parameters **/
+
+    /** Directionnal Light **/
     if (lightDirectionLocation >= 0) {
       if (lightFromCamera)
         glUniform3f(lightDirectionLocation, 0, 0, 1);
@@ -299,6 +375,48 @@ int ViewerApplication::run()
     }
     if (lightIntensityLocation >= 0) {
       glUniform3fv(lightIntensityLocation, 1, glm::value_ptr(lightIntensity));
+    }
+
+    /** Point Light **/
+    for (int i = 0; i < NB_POINTS_LIGHTS; ++i) {
+      if (pointLightPositionLocation[i] >= 0) {
+        if ((i == 0 && enablePointLight) ||
+            (i > 0 && enablePointLightAdditionnal)) {
+          glUniform3fv(pointLightPositionLocation[i], 1,
+              glm::value_ptr(glm::normalize(glm::vec3(
+                  viewMatrix * glm::vec4(pointLightPosition[i], 1.)))));
+          glUniform3fv(pointLightColorLocation[i], 1,
+              glm::value_ptr(pointLightIntensity[i]));
+          glUniform1f(pointLightConstantLocation[i], 1.0f);
+          glUniform1f(pointLightLinearLocation[i], 0.09f);
+          glUniform1f(pointLightQuadraticLocation[i], 0.032f);
+        } else {
+          glUniform3fv(pointLightColorLocation[i], 1,
+              glm::value_ptr(glm::vec3(0, 0, 0)));
+        }
+      }
+    }
+
+    /** Spot Light **/
+    if (spotLightPositionLocation >= 0) {
+      if (enableSpotLight) {
+        glUniform3fv(
+            spotLightPositionLocation, 1, glm::value_ptr(spotLightPosition));
+        glUniform3fv(
+            spotLightDirectionLocation, 1, glm::value_ptr(spotLightDirection));
+        glUniform3fv(
+            spotLightColorLocation, 1, glm::value_ptr(spotLightIntensity));
+        glUniform1f(
+            spotLightCutOffLocation, glm::cos(glm::radians(spotLightCutOff)));
+        glUniform1f(spotLightOuterCutOffLocation,
+            glm::cos(glm::radians(spotLightOuterCutOff)));
+        glUniform1f(spotLightConstantLocation, 1.0f);
+        glUniform1f(spotLightLinearLocation, 0.09f);
+        glUniform1f(spotLightQuadraticLocation, 0.032f);
+      } else {
+        glUniform3fv(spotLightColorLocation, 1, glm::value_ptr(glm::vec3(0.f)));
+        glUniform1f(spotLightCutOffLocation, glm::cos(glm::radians(0.f)));
+      }
     }
 
     // The recursive function that should draw a node
@@ -434,10 +552,12 @@ int ViewerApplication::run()
           }
           cameraController->setCamera(currentCamera);
         }
-        /** Parameter of Light**/
-        if (ImGui::CollapsingHeader("Light", ImGuiTreeNodeFlags_DefaultOpen)) {
-          theta = 0.72f;
-          phi = 2.6f;
+        /** Parameter of NormalMapping**/
+        ImGui::Checkbox("NormalMapping", &normalMapping);
+
+        /** Parameter of Directionnal Light **/
+        if (ImGui::CollapsingHeader(
+                "Direcional Light", ImGuiTreeNodeFlags_DefaultOpen)) {
 
           if (ImGui::SliderFloat("Theta", &theta, 0, glm::pi<float>()) ||
               ImGui::SliderFloat("Phi", &phi, 0, 2.f * glm::pi<float>())) {
@@ -449,16 +569,68 @@ int ViewerApplication::run()
                 glm::vec3(sinTheta * cosPhi, cosTheta, sinTheta * sinPhi);
           }
 
+          ImGui::Text("Directional light -> %.3f %.3f %.3f", lightDirection.x,
+              lightDirection.y, lightDirection.z);
+
           static auto lightColor = glm::vec3(1.f);
 
-          if (ImGui::SliderFloat("Intensity", &lightIntensityFactor, 0, 10.f) ||
+          if (ImGui::SliderFloat(
+                  "dirIntensity", &lightIntensityFactor, 0, 10.f) ||
               ImGui::ColorEdit3(
-                  "color", reinterpret_cast<float *>(&lightColor))) {
+                  "dirColor", reinterpret_cast<float *>(&lightColor))) {
             lightIntensity = lightColor * lightIntensityFactor;
           }
         }
         ImGui::Checkbox("Light from camera", &lightFromCamera);
-        ImGui::Checkbox("NormalMapping", &normalMapping);
+
+        /** Parameter of Point Light **/
+        if (ImGui::CollapsingHeader(
+                "Point Light", ImGuiTreeNodeFlags_DefaultOpen)) {
+          static auto pointLightColor = glm::vec3(1.f);
+          static float lightIntensityFactor = 1.f;
+          if (ImGui::SliderFloat("posX", &pointLightPosition[0].x, -10, 10.f) ||
+              ImGui::SliderFloat("posY", &pointLightPosition[0].y, -10, 10.f) ||
+              ImGui::SliderFloat("posZ", &pointLightPosition[0].z, -10, 10.f)) {
+            ImGui::Text("Point light -> %.3f %.3f %.3f",
+                pointLightPosition[0].x, pointLightPosition[0].y,
+                pointLightPosition[0].z);
+          }
+          if (ImGui::SliderFloat(
+                  "pointIntensity", &lightIntensityFactor, 0, 10.f) ||
+              ImGui::ColorEdit3(
+                  "pointColor", reinterpret_cast<float *>(&pointLightColor))) {
+            pointLightIntensity[0] = pointLightColor * lightIntensityFactor;
+          }
+        }
+        ImGui::Checkbox(
+            "enable/Disable Principal Point Light ", &enablePointLight);
+        ImGui::Checkbox("enable/Disable Additionnal Points Lights (2 lights) ",
+            &enablePointLightAdditionnal);
+
+        /** Parameter of Spot Light **/
+        if (ImGui::CollapsingHeader(
+                "Spot Light", ImGuiTreeNodeFlags_DefaultOpen)) {
+          static auto spotLightColor = glm::vec3(1.f);
+          static float lightIntensityFactor = 1.f;
+
+          if (ImGui::SliderFloat("posSLX", &spotLightPosition.x, -10, 10.f) ||
+              ImGui::SliderFloat("posSLY", &spotLightPosition.y, -10, 10.f) ||
+              ImGui::SliderFloat("posSLZ", &spotLightPosition.z, -10, 10.f) ||
+              ImGui::SliderFloat(
+                  "CutOff", &spotLightCutOff, 0.f, spotLightOuterCutOff) ||
+              ImGui::SliderFloat("OuterCutOff", &spotLightOuterCutOff,
+                  spotLightCutOff, 20.f)) {
+            ImGui::Text("Spot light Position -> %.3f %.3f %.3f",
+                spotLightPosition.x, spotLightPosition.y, spotLightPosition.z);
+          }
+          if (ImGui::SliderFloat(
+                  "spotIntensity", &lightIntensityFactor, 0, 10.f) ||
+              ImGui::ColorEdit3(
+                  "spotColor", reinterpret_cast<float *>(&spotLightColor))) {
+            spotLightIntensity = spotLightColor * lightIntensityFactor;
+          }
+        }
+        ImGui::Checkbox("enable/Disable Spot Light", &enableSpotLight);
       }
       ImGui::End();
     }
@@ -546,23 +718,17 @@ bool ViewerApplication::loadGltfFile(tinygltf::Model &model)
 std::vector<GLuint> ViewerApplication::createBufferObjects(
     const tinygltf::Model &model, bool normalMapping)
 {
-  // create a vector of GLuint with the correct size (model.buffers.size()) and
-  // use glGenBuffers to create buffer objects.
+  // create a vector of GLuint with the correct size (model.buffers.size())
+  // and use glGenBuffers to create buffer objects.
   std::vector<GLuint> bufferObjects(2 * model.buffers.size(), 0);
   glGenBuffers(GLsizei(2 * model.buffers.size()), bufferObjects.data());
   std::cout << "there is " << model.buffers.size()
             << " buffers in this gltf model" << std::endl;
   for (size_t i = 0; i < model.buffers.size(); ++i) {
+
     ////////////////////////////////////////////////////////////////
     ///         NORMAL MAPPING          ////////////////////////////
     ////////////////////////////////////////////////////////////////
-    // on va ajouter les données : tangentes et bitangentes au buffer
-    // le buffer actuel est structuré comme tel : [ [data???] [POSITION]
-    // [NORMAL] [TEX_COORD_0] ]
-
-    // on veut ajouter [TANGENT] et [BITANGENT] qui doivent chacune faire la
-    // même taille que [POSITION] ou [NORMAL] puisqu'ils contiennent tous
-    // 3 uchar par vertex (contrairement à TEX_COORD_0 qui n'en contient que 2)
 
     std::vector<float> buffer;
     std::vector<float> tangentBuffer;
@@ -731,10 +897,11 @@ std::vector<GLuint> ViewerApplication::createVertexArrayObjects(
         /*if (normalMapping) {
           glVertexAttribPointer(VERTEX_ATTRIB_POSITION_IDX, 3, GL_FLOAT,
               GL_FALSE, 8 * sizeof(float), (const GLvoid *)(0));
-          glVertexAttribPointer(VERTEX_ATTRIB_NORMAL_IDX, 3, GL_FLOAT, GL_FALSE,
-              8 * sizeof(float), (const GLvoid *)(3 * sizeof(float)));
+          glVertexAttribPointer(VERTEX_ATTRIB_NORMAL_IDX, 3, GL_FLOAT,
+        GL_FALSE, 8 * sizeof(float), (const GLvoid *)(3 * sizeof(float)));
           glVertexAttribPointer(VERTEX_ATTRIB_TEXCOORD0_IDX, 2, GL_FLOAT,
-              GL_FALSE, 8 * sizeof(float), (const GLvoid *)(6 * sizeof(float)));
+              GL_FALSE, 8 * sizeof(float), (const GLvoid *)(6 *
+        sizeof(float)));
         }*/
 
         ////////////////////////////////////////////////////////////////
